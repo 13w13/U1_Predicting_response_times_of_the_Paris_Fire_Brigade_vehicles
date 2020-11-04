@@ -1,0 +1,215 @@
+---
+title: "Predicting response times of the Paris Fire Brigade vehicles"
+author: "Edgar Jullien, Antoine Settelen, Simon Weiss"
+date: "04/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Script Edgar
+```{r}
+x_train <- read.csv("x_train.csv")
+y_train <- read.csv("y_train.csv")
+x_test <- read.csv("x_test.csv")
+View(x_train)
+data <- cbind(x_train,y_train)
+
+
+#Explanatory Data
+str(data)
+data$location.of.the.event <- as.factor(data$location.of.the.event)
+data$intervention.on.public.roads <- as.factor(data$intervention.on.public.roads )
+data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
+data$rescue.center <- as.factor(data$rescue.center)
+data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
+data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
+data$OSRM.response <- NULL
+
+data$month <- months(as.Date(data$date.key.sélection))
+data$month <- as.factor(data$month)
+
+# quantitatives variables
+
+# Histograms
+
+hist(data$floor, col="blue",main="Floor")
+hist(data$longitude.intervention, col="blue",main="Longitude intervention")
+hist(data$latitude.intervention, col="blue",main="Latitutde intervention")
+hist(data$delta.status.preceding.selection.selection , col="blue",main="delta status preceding selection-selection")
+hist(data$delta.position.gps.previous.departure.departure, col="blue",main="delta position gps previous departure-departure (int)")
+hist(data$longitude.before.departure, col="blue",main="longitude before departure ")
+hist(data$latitude.before.departure, col="blue",main="Latitude before departure ")
+hist(data$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
+hist(data$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
+
+
+
+# Boxplot
+boxplot(data$floor, col="blue",main="Floor") #Outliers > 40
+boxplot(data$longitude.intervention, col="blue",main="Longitude intervention")
+boxplot(data$latitude.intervention, col="blue",main="Latitutde intervention")
+boxplot(data$delta.status.preceding.selection.selection , col="blue",main="delta status preceding selection-selection") #Pas beau
+boxplot(data$delta.position.gps.previous.departure.departure, col="blue",main="delta position gps previous departure-departure (int)")
+boxplot(data$longitude.before.departure, col="blue",main="longitude before departure ")
+boxplot(data$latitude.before.departure, col="blue",main="latitude before departure ")
+boxplot(data$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
+boxplot(data$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
+
+# Manage outliers
+# delete observations where floors > 60
+data.clean <- data[data$floor < 40,]
+boxplot(data.clean$floor, col="blue",main="Floor")
+
+# transform variables
+#no possible with floor as we have negative variable
+
+data.clean$log.longitude.intervention <- log(data.clean$longitude.intervention)
+data.clean$log.latitude.intervention<- log(data.clean$latitude.intervention)
+data.clean$log.delta.status.preceding.selection.selection <- log(data.clean$delta.status.preceding.selection.selection)
+data.clean$log.delta.position.gps.previous.departure.departure <- log(data.clean$delta.position.gps.previous.departure.departure) 
+data.clean$log.longitude.before.departure <- log(data.clean$longitude.before.departure)
+data.clean$log.latitude.before.departure <- log(data.clean$latitude.before.departure)
+data.clean$log.OSRM.estimated.distance <- log(data.clean$OSRM.estimated.distance)
+data.clean$log.OSRM.estimated.duration   <- log(data.clean$OSRM.estimated.duration)
+
+
+# Histograms
+hist(data.clean$log.longitude.intervention, col="blue",main="Log longitude intervention")
+hist(data.clean$log.latitude.intervention, col="blue",main=" Log Latitutde intervention")
+hist(data.clean$log.delta.status.preceding.selection.selection , col="blue",main=" Log delta status preceding selection-selection")
+hist(data.clean$log.delta.position.gps.previous.departure.departure, col="blue",main="Log delta position gps previous departure-departure (int)")
+hist(data.clean$log.longitude.before.departure, col="blue",main="Log longitude before departure ")
+hist(data.clean$log.latitude.before.departure, col="blue",main="Log Latitude before departure ")
+hist(data.clean$log.OSRM.estimated.distance, col="blue",main="Log OSRM estimated distance")
+hist(data.clean$log.OSRM.estimated.duration, col="blue",main="Log OSRM estimated duration")
+
+
+# Boxplot
+boxplot(data.clean$log.longitude.intervention, col="blue",main="Log longitude intervention")
+boxplot(data.clean$log.latitude.intervention, col="blue",main=" Log Latitutde intervention")
+boxplot(data.clean$log.delta.status.preceding.selection.selection , col="blue",main=" Log delta status preceding selection-selection")
+boxplot(data.clean$log.delta.position.gps.previous.departure.departure, col="blue",main="Log delta position gps previous departure-departure (int)")
+boxplot(data.clean$log.longitude.before.departure, col="blue",main="Log longitude before departure ")
+boxplot(data.clean$log.latitude.before.departure, col="blue",main="Log Latitude before departure ")
+boxplot(data.clean$log.OSRM.estimated.distance, col="blue",main="Log OSRM estimated distance")
+boxplot(data.clean$log.OSRM.estimated.duration, col="blue",main="Log OSRM estimated duration")
+summary(data.clean)
+
+# Normality study
+# QQ Plot
+# when the variable is normally distributed
+# points are aligned on the first bisector
+
+qqnorm(data.clean$floor, main="Normality floor")
+qqline(data.clean$floor)
+
+qqnorm(data.clean$longitude.intervention, main="Normality longitude intervention")
+qqline(data.clean$longitude.intervention)
+qqnorm(data.clean$log.longitude.intervention, main="Normality log longitude intervention")
+qqline(data.clean$log.longitude.intervention)
+
+qqnorm(data.clean$latitude.intervention, main="Normality latitude intervention")
+qqline(data.clean$latitude.intervention)
+qqnorm(data.clean$log.latitude.intervention, main="Normality log latitude intervention")
+qqline(data.clean$log.latitude.intervention)
+
+qqnorm(data.clean$delta.status.preceding.selection.selection, main="Normality delta status preceding selection-selection")
+qqline(data.clean$delta.status.preceding.selection.selection)
+#qqnorm(data.clean$log.delta.status.preceding.selection.selection, main="Normality log delta status preceding selection-selectio")
+#not possible
+
+qqnorm(data.clean$delta.position.gps.previous.departure.departure, main="Normality delta status preceding selection-selection")
+qqline(data.clean$delta.position.gps.previous.departure.departure)
+#qqnorm(data.clean$log.delta.position.gps.previous.departure.departure, main="Normality log delta status preceding selection-selection")
+#not possible
+
+qqnorm(data.clean$longitude.before.departure, main="Normality longitude before departure")
+qqline(data.clean$longitude.before.departure)
+qqnorm(data.clean$log.longitude.before.departure, main="Normality log longitude before departure")
+qqline(data.clean$log.longitude.before.departure)
+
+qqnorm(data.clean$latitude.before.departure, main="Normality latitude before departure")
+qqline(data.clean$latitude.before.departure)
+qqnorm(data.clean$log.latitude.before.departure, main="Normality log latitude before departure")
+qqline(data.clean$log.latitude.before.departure)
+
+qqnorm(data.clean$OSRM.estimated.distance, main="NormalityOSRM estimated distance")
+qqline(data.clean$OSRM.estimated.distance)
+qqnorm(data.clean$log.OSRM.estimated.distance, main="Normality log OSRM estimated distance")
+qqline(data.clean$log.OSRM.estimated.distance)
+
+qqnorm(data.clean$OSRM.estimated.duration, main="Normality OSRM estimated duration")
+qqline(data.clean$OSRM.estimated.duration)
+qqnorm(data.clean$log.OSRM.estimated.duration, main="Normality log OSRM estimated duration")
+qqline(data.clean$log.OSRM.estimated.duration)
+
+
+#Qualitatives variables
+
+tapply(data.clean$delta.departure.presentation, data.clean$alert.reason.category, summary)
+bartlett.test(data.clean$delta.departure.presentation, data.clean$alert.reason.category)
+bartlett.test(data.clean$delta.departure.presentation, data.clean$intervention.on.public.roads) #pvalue <0,05
+bartlett.test(data.clean$delta.departure.presentation, data.clean$status.preceding.selection) #pvalue <0,05
+bartlett.test(data.clean$delta.departure.presentation, data.clean$departed.from.its.rescue.center)#pvalue <0,05
+bartlett.test(data.clean$delta.departure.presentation, data.clean$month)#pvalue <0,05
+
+data.clean$departed.from.its.rescue.center
+
+#Linear Regression,
+
+lm <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
++data.clean$longitude.intervention
++data.clean$latitude.intervention
++data.clean$delta.status.preceding.selection.selection
++data.clean$delta.position.gps.previous.departure.departure
++data.clean$longitude.before.departure
++data.clean$latitude.before.departure
++data.clean$OSRM.estimated.distance
++data.clean$OSRM.estimated.duration
++factor(data.clean$intervention.on.public.roads)
+, data=data.clean
+)
+summary(lm)
+
+
+lm1 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
+         +data.clean$latitude.intervention
+         +data.clean$delta.status.preceding.selection.selection
+         +data.clean$delta.position.gps.previous.departure.departure
+         +data.clean$longitude.before.departure
+         +data.clean$latitude.before.departure
+         +data.clean$OSRM.estimated.distance
+         +data.clean$OSRM.estimated.duration
+         +factor(data.clean$intervention.on.public.roads)
+         , data=data.clean
+)
+summary(lm1)
+
+lm2 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
+          +data.clean$latitude.intervention
+          +data.clean$delta.status.preceding.selection.selection
+          +data.clean$longitude.before.departure
+          +data.clean$latitude.before.departure
+          +data.clean$OSRM.estimated.distance
+          +data.clean$OSRM.estimated.duration
+          +factor(data.clean$intervention.on.public.roads)
+          , data=data.clean
+)
+summary(lm2)
+
+lm3 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
+          +data.clean$latitude.intervention
+          +data.clean$delta.status.preceding.selection.selection
+          +data.clean$latitude.before.departure
+          +data.clean$OSRM.estimated.distance
+          +data.clean$OSRM.estimated.duration
+          +factor(data.clean$intervention.on.public.roads)
+          , data=data.clean
+)
+summary(lm3)
+
+```
+
