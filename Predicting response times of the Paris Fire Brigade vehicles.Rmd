@@ -5,8 +5,29 @@ date: "04/11/2020"
 output: html_document
 ---
 
+
+Liens notebook inspiration artistique : 
+Les notebooks qui ont déja fait le challenge : 
+https://github.com/quachn/X_PFB
+https://github.com/Gguinet/Fire-Brigade-Challenge/blob/master/.ipynb_checkpoints/Code-checkpoint.ipynb
+
+
+
+
+Les notebooks traintant du même type de problème : 
+https://medium.com/crim/predicting-the-response-times-of-firefighters-using-data-science-da79f6965f93
+https://www.kaggle.com/gaborfodor/from-eda-to-the-top-lb-0-367
+https://www.kaggle.com/karelrv/nyct-from-a-to-z-with-xgboost-tutorial
+https://www.kaggle.com/headsortails/nyc-taxi-eda-update-the-fast-the-curious
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(magrittr)
+library(DataExplorer)
 ```
 
 Script Edgar
@@ -17,7 +38,6 @@ x_test <- read.csv("x_test.csv")
 View(x_train)
 data <- cbind(x_train,y_train)
 
-
 #Explanatory Data
 str(data)
 data$location.of.the.event <- as.factor(data$location.of.the.event)
@@ -26,10 +46,14 @@ data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
 data$rescue.center <- as.factor(data$rescue.center)
 data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
 data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
-data$OSRM.response <- NULL
+data$OSRM.response <- NULL #temporaire
 
 data$month <- months(as.Date(data$date.key.sélection))
 data$month <- as.factor(data$month)
+
+
+#Check if NA 
+
 
 # quantitatives variables
 
@@ -149,6 +173,7 @@ qqline(data.clean$log.OSRM.estimated.duration)
 
 #Qualitatives variables
 
+
 tapply(data.clean$delta.departure.presentation, data.clean$alert.reason.category, summary)
 bartlett.test(data.clean$delta.departure.presentation, data.clean$alert.reason.category)
 bartlett.test(data.clean$delta.departure.presentation, data.clean$intervention.on.public.roads) #pvalue <0,05
@@ -157,59 +182,51 @@ bartlett.test(data.clean$delta.departure.presentation, data.clean$departed.from.
 bartlett.test(data.clean$delta.departure.presentation, data.clean$month)#pvalue <0,05
 
 data.clean$departed.from.its.rescue.center
+```
 
+
+Etude de correlation, PCA pour réduire facteur et variable. 
+
+Regrouper véhicule, ressources center, location of the event
+
+```{r}
 #Linear Regression,
 
-lm <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
-+data.clean$longitude.intervention
-+data.clean$latitude.intervention
-+data.clean$delta.status.preceding.selection.selection
-+data.clean$delta.position.gps.previous.departure.departure
-+data.clean$longitude.before.departure
-+data.clean$latitude.before.departure
-+data.clean$OSRM.estimated.distance
-+data.clean$OSRM.estimated.duration
-+factor(data.clean$intervention.on.public.roads)
-, data=data.clean
-)
+lm <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$longitude.intervention+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$delta.position.gps.previous.departure.departure+data.clean$longitude.before.departure+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
+
 summary(lm)
 
 
-lm1 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
-         +data.clean$latitude.intervention
-         +data.clean$delta.status.preceding.selection.selection
-         +data.clean$delta.position.gps.previous.departure.departure
-         +data.clean$longitude.before.departure
-         +data.clean$latitude.before.departure
-         +data.clean$OSRM.estimated.distance
-         +data.clean$OSRM.estimated.duration
-         +factor(data.clean$intervention.on.public.roads)
-         , data=data.clean
-)
+lm1 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$delta.position.gps.previous.departure.departure+data.clean$longitude.before.departure+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
 summary(lm1)
 
-lm2 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
-          +data.clean$latitude.intervention
-          +data.clean$delta.status.preceding.selection.selection
-          +data.clean$longitude.before.departure
-          +data.clean$latitude.before.departure
-          +data.clean$OSRM.estimated.distance
-          +data.clean$OSRM.estimated.duration
-          +factor(data.clean$intervention.on.public.roads)
-          , data=data.clean
-)
+lm2 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$longitude.before.departure+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
 summary(lm2)
 
-lm3 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor
-          +data.clean$latitude.intervention
-          +data.clean$delta.status.preceding.selection.selection
-          +data.clean$latitude.before.departure
-          +data.clean$OSRM.estimated.distance
-          +data.clean$OSRM.estimated.duration
-          +factor(data.clean$intervention.on.public.roads)
-          , data=data.clean
-)
+lm3 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
 summary(lm3)
+
+```
+Just for test 
+```{r}
+lm.selection.departure <- lm(data.clean$delta.selection.departure~., data=data.clean[,-1])
+
+summary(lm.selection.departure)
+
+lm1.selection.departure<-(data.clean$delta.selection.departure ~data.clean$delta.status.preceding.selection.selection+factor(data.clean$intervention.on.public.roads), data=data.clean)
+summary(lm1.selection.departure)
+
+```
+
+
+```{r}
+library(tree)
+tree1.train <-  tree(delta.selection.departure~.,data=data.clean[,-c(7,1,11,12)])
+summary(tree1.train)
+plot(tree1.train)
+text(tree1.train,pretty = 0)
+
+tree1.predict<-predict(tree1.train, newdata=x_test)
 
 ```
 
