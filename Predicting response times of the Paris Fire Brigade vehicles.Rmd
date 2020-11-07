@@ -37,11 +37,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Presentation of the project
 
-This group project responds to the **professor’s Nadine Galy instructions** written below :  
+This group project responds to the **prof Nadine Galy instructions** written below :  
 The project involves identifying a real-world business problem or opportunity and designing and implementing an analysis plan to address it using at least one of the modelling methods studied in the course. You are free to choose any business problem or opportunity or public policy issue that you consider challenging and useful to address using business analytics.
 The data that you use should be readily available and verifiable.
 
-This is a notebook for the [Paris Fire Brigate](https://paris-fire-brigade.github.io/data-challenge/challenge.html) data challenge with [ENS](https://challengedata.ens.fr/participants/challenges/21/) and [College de France](https://www.college-de-france.fr/site/stephane-mallat/Challenges-2020.htm).
+This is a notebook for the [Paris Fire Brigate](https://paris-fire-brigade.github.io/data-challenge/challenge.html) data challenge 2020 with [ENS](https://challengedata.ens.fr/participants/challenges/21/) and [College de France](https://www.college-de-france.fr/site/stephane-mallat/Challenges-2020.htm).
 
 
 **The goal of this playground challenge** is to predict the *The response times of the Paris Fire Brigade vehicles * which is the delay between:
@@ -57,9 +57,16 @@ Based on features like trip coordinates, pickup date, type of the arriavl destin
 The [data](https://challengedata.ens.fr/participants/challenges/21/) which covers the entier year 2018 for which inoperable data have been squeezed out comes in the shape of 219 337 training observations and 108 033 test observation. The dataset covers the entire year 
 Each row contains one Paris fire brigade intervention.
 
+"Response time is one of the most important factors for firefighters because their ability to save lives and rescue people depends on it. Every fire department in the world seeks strategies to decrease their response time, and several analyses have been conducted in the past years to determine what could impact response time. In the meantime, fire departments have been collecting data on their interventions; yet, few of them actually use data science to develop a data-driven decision making approach."https://medium.com/crim/predicting-the-response-times-of-firefighters-using-data-science-da79f6965f93
+
+
+"A lot of fire departments and emergency services rely on geographic information systems tools, such as ESRI ARCGis or Network Analyst, to obtain estimations about the response time. These tools rely on computing the shortest route using a graphical representation of the road network, which usually gives an accurate estimate of the travel time. Their drawback is that they cannot always take into consideration external dynamic factors such as the weather, traffic or type of units or intervention. Hence, there is an opportunity for machine learning tools to be used here."
+
+
+
 **In this notebook**, we will first study and visualise the original data, engineer new features, and examine potential outliers. Then... 
 
-We hope that this notebook will have good results n the challenge and responds fully to Nadine Galy requirement.
+We hope that this notebook will have good results to the challenge and responds fully to Nadine Galy requirement.
 As always, any feedback, questions, or constructive criticism are much appreciated.
 
 
@@ -141,37 +148,174 @@ As always, any feedback, questions, or constructive criticism are much appreciat
 Good reading ! 
 
 
+## 1.1 Load libraries 
 
 ```{r}
 library(magrittr)
 library(data.table)
 library(sandwich)
+library(dplyr)
+library(DataExplorer)
 ```
 
-## Load data, transform tem into Datatable for better computation time and combine them. 
+## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
 ```{r}
 x_train <- read.csv("x_train.csv") %>% setDT
 y_train <- read.csv("y_train.csv") %>% setDT
 x_test <- read.csv("x_test.csv") %>% setDT
 View(x_train)
-data <- cbind(x_train,y_train)
+data <- cbind(x_train,y_train[,-1])#we don't keep id vehicule selection for no duplicate
 ```
 
 
 
-## File structure and content
-Let's have an overview of the data sets using the *summary* and *glimpse* tools. First the training data:
+
+## 1.3 File structure and content
+Let's have an overview of the data sets using the *introduce* and *head* tools. First the training data:
 
 ```{r}
-summary(data)
+plot_intro(data)
 ```
 
-
-And then the testing data:
 
 ```{r}
-summary(x_test)
+glimpse(data)
 ```
+
+```{r}
+plot_intro(x_test)
+```
+
+```{r}
+glimpse(x_test)
+```
+
+We find : 
+- we have a great mix of qualitative data and quantitative data
+- some quali data are characters such as "status.preceding.selection, other dummy variables coded 0,1 such as $intervention.on.public.roads
+- we have NA values
+- We have ID variables that we can remove
+- We will have to deal with outliers
+- Mean of 
+** `delta selection-departure`(int): elapsed time in seconds between the selection and the departure of the emergency vehicle
+* **[TO PREDICT]** `delta departure-presentation`(int): elapsed time in seconds between the departure of the emergency vehicle and its presentation on the intervention scene
+* **[TO PREDICT]** `delta selection-presentation `(int): elapsed time in seconds between the selection of the emergency vehicle and its presentation on the intervention scene (delta selection-departure + delta departure-presentation)
+
+
+
+## 1.4 Missing values
+
+```{r}
+# visualize missing data
+introduce(data)
+plot_missing(data)
+```
+
+```{r}
+introduce(x_train)
+plot_missing(x_train)
+
+```
+
+
+We delete the useless column and the raw with empty cells
+```{r}
+data <- data[,-24] # delete the column OSMR response json object
+data <- data[,-21] #delete the column delta position gps
+```
+Same with x_test data
+```{r}
+x_test<-x_test[,-24]
+x_test<-x_test[,-21]
+```
+
+Let's check how many na it remains
+```{r}
+sum(is.na(data))
+sum(is.na(x_test))
+```
+Good proporition (around 5% of dataset), acceptable to omit those values. 
+
+```{r}
+data.na <- na.omit(data)
+x_train<-na.omit(x_train)
+```
+
+# 2. EDA
+
+## 2.1 Intro : map 
+We start with a map of Paris and overlay a managable number of coordinates to get a general overview of the locations and distances in question. For this visualisation we use the [leaflet](https://rstudio.github.io/leaflet/) package, which includes a variety of cool tools for interactive maps. In this map you can zoom and pan through the interventation locations:
+
+```{r fig.align = 'default', warning = FALSE, fig.cap ="Fig. 1", out.width="100%"}
+set.seed(1234)
+foo <- sample_n(data, 8e3)
+
+leaflet(data = foo) %>% addProviderTiles("Esri.NatGeoWorldMap") %>%
+  addCircleMarkers(~ longitude.intervention, ~latitude.intervention, radius = 1,
+                   color = "blue", fillOpacity = 0.3)
+
+```
+
+Comment maps : 
+
+## 2.2 Dependant Variables Ys
+We have 3 dependant variables 
+
+```{r}
+summary(y_train[,-1])
+```
+
+Extreme values for your Ys variables around 6 hours ! 
+
+Plot histogram distriubtion for time of vehicule selection
+```{r}
+data %>%
+  ggplot(aes(delta.selection.departure)) +
+  geom_histogram(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt()
+```
+
+Note the logarithmic x-axis and square-root y-axis.
+
+We find:
+
+    the majority of vehicule rather timinh follow a rather smooth distribution that looks almost log-normal with a peak just short of 200 seconds, i.e. about 4 minutes.
+
+    There are several suspiciously short rides with less than 10 seconds duration.
+
+    Additionally, there is a strange delta-shaped peak of trip_duration just before the 1e5 seconds mark and even a few way above it:
+    
+Plot histogram distriubtion the time to present to the place
+```{r}
+data %>%
+  ggplot(aes(delta.departure.presentation)) +
+  geom_histogram(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt()
+```
+
+We find:
+
+    same smooth distribution that looks almost log-normal with a peak around 400, 500 seconds, i.e. about 6 minutes.
+
+From previous observation. 
+
+Global variable : selection to arrival
+around 8 to 10 mintues. 
+
+
+
+In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
+
+
+The outliers must
+
+### Manage outliers for Ys values
+  
+  
+  
+
 
 #Explanatory Data
 
@@ -185,15 +329,8 @@ data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
 data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
 ```
 
-#We delete the useless column and the raw with empty cells
-```{r}
-colnames(data)
-data <- data[,-24] # delete the column OSMR response with many NA
-data <- data[,-21] #delete the column delta position gps 
-sum(is.na(data))
-data.na <- na.omit(data)
-```
-Check if NA
+
+
 
 
 # We analyse the quantitatives variables
@@ -424,6 +561,17 @@ data.variables.without.cor <- na.omit(data.variables.without.cor)
 #Etude de correlation, PCA pour réduire facteur et variable. 
 
 #Regrouper véhicule, ressources center, location of the event
+
+
+
+# OLS - Regression
+
+Split data: train et test
+On predict sur le test du train. 
+Faire comparaison de mod�le. 
+
+
+On garde x_test pour le final predict
 
 ```{r}
 #Linear Regression,
