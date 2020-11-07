@@ -144,7 +144,6 @@ Good reading !
 
 ```{r}
 library(magrittr)
-library(DataExplorer)
 library(data.table)
 library(sandwich)
 ```
@@ -184,16 +183,11 @@ data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
 data$rescue.center <- as.factor(data$rescue.center)
 data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
 data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
-data$OSRM.response
-data$month <- months(as.Date(data$date.key.sélection))
-data$month <- as.factor(data$month)
-
-
-
 ```
 
 #We delete the useless column and the raw with empty cells
 ```{r}
+colnames(data)
 data <- data[,-24] # delete the column OSMR response with many NA
 data <- data[,-21] #delete the column delta position gps 
 sum(is.na(data))
@@ -374,11 +368,18 @@ qqline(data.clean$log.OSRM.estimated.duration)
 
 ```{r}
 colnames(data.clean)
-data.variables <- data.clean[,c(3,5,6,7,8,9,11,12,16,17,18,19,20,23,24,28)]
+data.variables <- data.clean[,c(3,5,6,7,8,9,11,12,16,17,18,19,20,23,24,25,27,28)]
 colnames(data.variables)
-colnames(data.quanti)
-data.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16)]
-data.quali <- data.variables[,-c(3,5,6,10,12,13,14,15,16)]
+data.variables$alert.reason.category <- as.factor(data.variables$alert.reason.category )
+data.variables$intervention.on.public.roads <- as.factor(data.variables$intervention.on.public.roads)
+data.variables$emergency.vehicle.type <- as.factor(data.variables$emergency.vehicle.type)
+data.variables$rescue.center <- as.factor(data.variables$rescue.center )
+data.variables$departed.from.its.rescue.center <- as.factor(data.variables$departed.from.its.rescue.center)
+
+
+colnames(data.quali)
+data.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
+data.quali <- data.variables[,-c(3,5,6,10,12,13,14,15,16,17,18)]
 ```
 #coorelation
 ```{r}
@@ -400,6 +401,7 @@ cor(data.quanti)
 
 ```{r}
 data.variables.without.cor <- data.variables[,-c(12,13)]
+str(data.variables.without.cor)
 ```
   
  
@@ -415,6 +417,9 @@ bartlett.test(data.clean$delta.departure.presentation, data.clean$month)#pvalue 
 data.clean$departed.from.its.rescue.center
 ```
 
+```{r}
+data.variables.without.cor <- na.omit(data.variables.without.cor)
+```
 
 #Etude de correlation, PCA pour réduire facteur et variable. 
 
@@ -423,30 +428,84 @@ data.clean$departed.from.its.rescue.center
 ```{r}
 #Linear Regression,
 str(data.variables.without.cor)
-lm <- lm(data.variables.without.cor$delta.selection.presentation~.,data = data.variables.without.cor)
+lm <- lm(delta.selection.presentation ~ 
+           floor 
+         +  longitude.intervention
+         + latitude.intervention
+         + delta.status.preceding.selection.selection
+         +OSRM.estimated.distance
+         +OSRM.estimated.duration
+         +alert.reason.category
+         +intervention.on.public.roads
+         +location.of.the.event
+         +emergency.vehicle.type
+         +rescue.center
+         +status.preceding.selection
+         +departed.from.its.rescue.center
+           ,data = data.variables.without.cor)
+
 summary(lm)
+options(max.print = 10000)
+
+```
+# We can remove the rescue center because he has the higher pvalue
+```{r}
+lm1 <- lm(delta.selection.presentation ~ 
+           floor 
+         +  longitude.intervention
+         + latitude.intervention
+         + delta.status.preceding.selection.selection
+         +OSRM.estimated.distance
+         +OSRM.estimated.duration
+         +alert.reason.category
+         +intervention.on.public.roads
+         +location.of.the.event
+         +emergency.vehicle.type
+         +status.preceding.selection
+         +departed.from.its.rescue.center
+           ,data = data.variables.without.cor)
+summary(lm1)
 ```
 
-
+# We  remove the departed.from.its.rescue.center because he has the higher pvalue
+```{r}
+lm2 <- lm(delta.selection.presentation ~ 
+           floor 
+         +  longitude.intervention
+         + latitude.intervention
+         + delta.status.preceding.selection.selection
+         +OSRM.estimated.distance
+         +OSRM.estimated.duration
+         +alert.reason.category
+         +intervention.on.public.roads
+         +location.of.the.event
+         +emergency.vehicle.type
+         +status.preceding.selection
+           ,data = data.variables.without.cor)
+summary(lm2)
+```
 
 ```{r}
-
-
-lm <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$longitude.intervention+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$delta.position.gps.previous.departure.departure+data.clean$longitude.before.departure+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
-
-summary(lm)
-
-
-lm1 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$delta.position.gps.previous.departure.departure+data.clean$longitude.before.departure+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
-summary(lm1)
-
-lm2 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$longitude.before.departure+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
-summary(lm2)
-
-lm3 <- lm(data.clean$delta.selection.presentation ~ data.clean$floor+data.clean$latitude.intervention+data.clean$delta.status.preceding.selection.selection+data.clean$latitude.before.departure+data.clean$OSRM.estimated.distance+data.clean$OSRM.estimated.duration+factor(data.clean$intervention.on.public.roads), data=data.clean)
-summary(lm3)
-
+vif(lm2)
+cor(data.quanti)
 ```
+
+```{r}
+lm3 <- lm(delta.selection.presentation ~ 
+           floor 
+         +  longitude.intervention
+         + latitude.intervention
+         + delta.status.preceding.selection.selection
+         +OSRM.estimated.distance
+         +alert.reason.category
+         +intervention.on.public.roads
+         +location.of.the.event
+         +emergency.vehicle.type
+         +status.preceding.selection
+           ,data = data.variables.without.cor)
+summary(lm3)
+```
+
 Just for test 
 ```{r}
 lm.selection.departure <- lm(data.clean$delta.selection.departure~., data=data.clean[,-12])
