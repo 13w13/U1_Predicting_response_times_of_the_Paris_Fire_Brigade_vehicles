@@ -238,8 +238,15 @@ Good proporition (around 5% of dataset), acceptable to omit those values.
 
 ```{r}
 data.na <- na.omit(data)
+x_test<-na.omit(x_test)
+```
+
+(We apply same cleaning in x_train and y_train in case)
+```{r}
+y_train <- na.omit(y_train)
 x_train<-na.omit(x_train)
 ```
+
 
 # 2. EDA
 
@@ -259,7 +266,7 @@ leaflet(data = foo) %>% addProviderTiles("Esri.NatGeoWorldMap") %>%
 Comment maps : 
 
 ## 2.2 Dependant Variables Ys
-We have 3 dependant variables 
+We have 2 dependant variables and 1 gloabl variable
 
 ```{r}
 summary(y_train[,-1])
@@ -267,13 +274,14 @@ summary(y_train[,-1])
 
 Extreme values for your Ys variables around 6 hours ! 
 
-Plot histogram distriubtion for time of vehicule selection
+Plot density distriubtion for time of vehicule selection
 ```{r}
 data %>%
   ggplot(aes(delta.selection.departure)) +
-  geom_histogram(fill = "red", bins = 100) +
+  geom_density(fill = "red", bins = 100) +
   scale_x_log10() +
-  scale_y_sqrt()
+  scale_y_sqrt() + 
+  theme_minimal()
 ```
 
 Note the logarithmic x-axis and square-root y-axis.
@@ -286,13 +294,14 @@ We find:
 
     Additionally, there is a strange delta-shaped peak of trip_duration just before the 1e5 seconds mark and even a few way above it:
     
-Plot histogram distriubtion the time to present to the place
+Plot density distriubtion the time to present to the place
 ```{r}
 data %>%
   ggplot(aes(delta.departure.presentation)) +
-  geom_histogram(fill = "red", bins = 100) +
+  geom_density(fill = "red", bins = 100) +
   scale_x_log10() +
-  scale_y_sqrt()
+  scale_y_sqrt() + 
+  theme_minimal()
 ```
 
 We find:
@@ -308,13 +317,64 @@ around 8 to 10 mintues.
 
 In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
 
-
-The outliers must
-
 ### Manage outliers for Ys values
-  
-  
-  
+
+
+Box plot Ys 
+
+
+Delta selection departure
+
+Delta Departure to presentation
+
+Delta
+
+Plot 
+  delta.selection.departure
+```{r}
+y_train %>% 
+  mutate(
+      delta.selection.departure_minutes = round(delta.selection.departure / 60, 0),
+    duration_grp = case_when(
+      between(delta.selection.departure_minutes, 0,  2)  ~ "Less than 2 minutes",
+      between(delta.selection.departure_minutes, 2, 4) ~ "2 to 4 minutes",
+      between(delta.selection.departure_minutes, 4, 8) ~ "8 to 12 minutes",
+      delta.selection.departure_minutes >= 8 ~ "8 or more minutes"
+    ),
+    duration_grp = factor(duration_grp, 
+                          levels = c("Less than 2 minutes", "2 to 4 minutes", "8 to 12 minutes", "12 or more minutes"))
+  ) %>%
+  group_by(duration_grp) %>% 
+  ggplot(aes(x=duration_grp,group=duration_grp)) + 
+  geom_bar(fill="#E41A1C") +
+  labs(x="Group", y="count") +
+  theme_minimal()
+```
+Most of data is around 0 to 12 max minutes for 
+
+
+Departure to presentation
+```{r}
+y_train %>% 
+  mutate(
+      delta.departure.presentation_minutes = round(delta.departure.presentation / 60, 0),
+    duration2_grp = case_when(
+      between(delta.departure.presentation_minutes, 0,  5)  ~ "Less than 5 minutes",
+      between(delta.departure.presentation_minutes, 5, 10) ~ "5 to 10 minutes",
+      between(delta.departure.presentation_minutes, 10, 15) ~ "10 to 15 minutes",
+      between(delta.departure.presentation_minutes, 15, 20) ~ "15 to 20 minutes",
+      delta.departure.presentation_minutes >= 20 ~ "20 or more minutes"
+    ),
+    duration2_grp = factor(duration2_grp, 
+                          levels = c("Less than 5 minutes", "5 to 10 minutes", "10 to 15 minutes", "15 to 20 minutes","20 or more minutes" ))
+  ) %>%
+  group_by(duration2_grp) %>% 
+  ggplot(aes(x=duration2_grp,group=duration2_grp)) + 
+  geom_bar(fill="#E41A1C") +
+  labs(x="Group", y="count") +
+  theme_minimal()
+```
+
 
 
 #Explanatory Data
