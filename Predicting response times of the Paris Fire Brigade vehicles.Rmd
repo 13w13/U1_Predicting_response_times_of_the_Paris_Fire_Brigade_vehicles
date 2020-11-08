@@ -223,6 +223,9 @@ We delete the useless column and the raw with empty cells
 data <- data[,-24] # delete the column OSMR response json object
 data <- data[,-21] #delete the column delta position gps
 ```
+
+
+
 Same with x_test data
 ```{r}
 x_test<-x_test[,-24]
@@ -248,7 +251,10 @@ x_train<-na.omit(x_train)
 ```
 
 
-## 1.5 Convert qualitative variables into factor
+## 1.5 Convertion into right format
+
+
+Convert qualitative variables into factor
 ```{r}
 data$alert.reason.category<- as.factor(data$alert.reason.category)
 data$alert.reason<-as.factor(data$alert.reason)
@@ -274,6 +280,15 @@ x_test$status.preceding.selection  <- as.factor(x_test$status.preceding.selectio
 x_test$departed.from.its.rescue.center  <- as.factor(x_test$departed.from.its.rescue.center)
 ```
 
+Convert *Selection time into Date format
+
+ * `selection time` (datetime): selection time of the emergency vehicle
+            * `date key selection` (int): selection date in YYYYMMDD format
+            * `time key selection` (int): selection time in HHMMSS format
+```{r}
+data$selection.time<-data$selection.time %>% as.Date()
+```
+
 
 Then, let's store quanti and variable variable
 ```{r}
@@ -282,44 +297,6 @@ data.quanti.y<-data[,-c(3,4,5,7,11,12,16,18)] #with Ys
 data.quanti<-data[,-c(3,4,5,7,11,12,16,18,25,26,27)]
 ```
 
-## 1.6 Convert GPS data
-First GPS.track.departure.presentation is stored as set of character lat and log
-```{r}
-data$GPS.tracks.departure.presentation %>% head
-```
-Let's convert it into 2 columns : 
-GPS.track.departure.presentation.lat
-GPS.track.departure.presentation.long
-
-
-Get metric in indicators Names : Using stringr library and str_extract_all in order to get in a matrix all what is inside parenthesis
-
-# Get the parenthesis and what is inside
-metrics <- as.data.frame(str_extract_all(GPS.track.departure.presentation.lat, "",.*$")", simplify = TRUE))
-
-```{r}
-GPS.track.departure.presentation.lat<-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+"))
-
-GPS.track.departure.presentation.lat %>% head
-
-GPS.track.departure.presentation.long<-as.data.frame(str_extract_all(data$GPS.tracks.departure.presentation, "[,^]+"))
-
-```
-
-```{r}
-
-# Get the parenthesis and what is inside
-GPS.track.departure.presentation.lat <-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+", simplify = TRUE))
-```
-
-```{r}
-GPS.track.departure.presentation.lat %>% head
-```
-
-
-```{r}
-GPS.tracks.departure.presentation.lat %>% head
-```
 
 # 2. EDA
 
@@ -339,7 +316,7 @@ leaflet(data = foo) %>% addProviderTiles("Esri.NatGeoWorldMap") %>%
 Comment maps : 
 
 ## 2.2 Dependant Variables Ys
-We have 2 dependant variables and 1 gloabl variable
+We have 2 dependant variables and 1 global variable
 
 ```{r}
 summary(y_train[,-1])
@@ -390,17 +367,34 @@ around 8 to 10 mintues.
 
 In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
 
+
+Box plots Ys 
+```{r}
+
+```
+
+
+Cor between Ys
+
+```{r}
+library(Hmisc)
+library(corrplot)
+corr<-rcorr(as.matrix(y_train[,-c(1,4)])) # We remove global and ID which will be cor
+y_train_cor= corr$r
+
+corr
+corrplot(y_train_cor, method="square",type="upper", order="hclust", tl.col="black", tl.srt=45)
+```
+
+The 2 Ys are not corr between them
+
+
 ### 2.2.1 Manage outliers for Ys values
 
 
-Box plot Ys 
 
 
-Delta selection departure
 
-Delta Departure to presentation
-
-Delta
 
 Plot 
   delta.selection.departure
@@ -486,18 +480,74 @@ We can set our outlier cleaning
 
 First, let's study  Y0 'selection-departure' vs feature vars
 
-data quanti + ys
+data quanti and y execpt GPS data
+
+
 ```{r}
-data.quali.y=data[,c(3,4,5,7,11,12,16,18,25,26,27)]
+data.quanti.y.nogps<-data.quanti.y[,-c(13,14)]
 ```
 
-
 ```{r}
-pairs(delta.selection.departure~.,data=data.quanti,
-   main="Simple Scatterplot Matrix")
+data.quanti.y.nogps %>% head
 ```
 
 scatter plot
+```{r}
+pairs(delta.selection.departure~.,data=data.quanti.y.nogps,
+   main="Simple Scatterplot Matrix")
+```
+
+
+
+
+
+
+### GPS data [if time]
+
+We have to do some feature enreginering with this data. 
+But if we have distance OSRM, is it not sufficiant ? 
+
+
+First GPS.track.departure.presentation is stored as a set of character lat and log. 
+
+* `GPS tracks departure-presentation` (float pair list): successive GPS positions (*longitude,latitude;longitude,latitude,* etc.) of the vehicle between departure and presentation. This information is for informational purposes to study vehicle behaviors. (The beacons, emitting the GPS positions of vehicles, are currently not always lit)
+
+
+```{r}
+data$GPS.tracks.departure.presentation %>% head
+```
+Let's convert it into 2 columns : 
+GPS.track.departure.presentation.lat
+GPS.track.departure.presentation.long
+
+
+
+```{r}
+str_extract_all(data$GPS.tracks.departure.presentation, "[,]+", simplify=TRUE)
+
+GPS.track.departure.presentation.lat<-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+"))
+
+GPS.track.departure.presentation.lat %>% head
+
+GPS.track.departure.presentation.long<-as.data.frame(str_extract_all(data$GPS.tracks.departure.presentation, "[,^]+"))
+
+```
+
+```{r}
+# Get the parenthesis and what is inside
+GPS.track.departure.presentation.lat <-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+", simplify = TRUE))
+```
+
+```{r}
+GPS.track.departure.presentation.lat %>% head
+```
+
+
+```{r}
+GPS.tracks.departure.presentation.lat %>% head
+```
+
+
 
 
 #Explanatory Data
