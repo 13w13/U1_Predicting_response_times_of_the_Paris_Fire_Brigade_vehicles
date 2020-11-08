@@ -169,8 +169,6 @@ data <- cbind(x_train,y_train[,-1])#we don't keep id vehicule selection for no d
 ```
 
 
-
-
 ## 1.3 File structure and content
 Let's have an overview of the data sets using the *introduce* and *head* tools. First the training data:
 
@@ -259,7 +257,7 @@ Convert qualitative variables into factor
 data$alert.reason.category<- as.factor(data$alert.reason.category)
 data$alert.reason<-as.factor(data$alert.reason)
 data$location.of.the.event <- as.factor(data$location.of.the.event)
-data$intervention.on.public.roads <- as.factor(data$intervention.on.public.roads )
+data$intervention.on.public.roads <- as.factor(data$intervention.on.public.roads)
 data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
 data$rescue.center <- as.factor(data$rescue.center)
 data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
@@ -575,6 +573,9 @@ data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue
 #Histograms
 
 ```{r}
+
+data.na = data
+
 hist(data.na$floor, col="blue",main="Floor")
 hist(data.na$longitude.intervention, col="blue",main="Longitude intervention")
 hist(data.na$latitude.intervention, col="blue",main="Latitutde intervention")
@@ -585,9 +586,6 @@ hist(data.na$latitude.before.departure, col="blue",main="Latitude before departu
 hist(data.na$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
 hist(data.na$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
 ```
-
-
-
 
 ```{r}
 hist(data.na$delta.selection.departure, col="blue",main="Delta selection departure")
@@ -618,7 +616,6 @@ boxplot(data.na$delta.selection.presentation, col="blue",main="Delta selection p
 ```{r}
 summary(data.na)
 ```
-
 
 # We Manage outliers
 ```{r}
@@ -734,19 +731,44 @@ qqline(data.clean$log.OSRM.estimated.duration)
 
 
 ```{r}
+
+str(data.clean)
+
+#we don't keep 1, 2, 10, 13, 14, 20, 21
+
+
 colnames(data.clean)
-data.variables <- data.clean[,c(3,5,6,7,8,9,11,12,16,17,18,19,20,23,24,25,27,28)]
+data.variables <- data.clean[,c(3,4,5,6,7,8,9,11,12,15,16,17,18,19,22,23,24,25,26)]
+str(data.variables)
 colnames(data.variables)
-data.variables$alert.reason.category <- as.factor(data.variables$alert.reason.category )
-data.variables$intervention.on.public.roads <- as.factor(data.variables$intervention.on.public.roads)
-data.variables$emergency.vehicle.type <- as.factor(data.variables$emergency.vehicle.type)
-data.variables$rescue.center <- as.factor(data.variables$rescue.center )
-data.variables$departed.from.its.rescue.center <- as.factor(data.variables$departed.from.its.rescue.center)
 
 
-colnames(data.quali)
-data.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
+str(data.variables)
+
+table(data.variables$alert.reason.category)
+
+table(data.variables$alert.reason) 
+#csq -> we need to combine several categories for alert reason variable
+#for the moment, we just take out this variable
+
+data.variables <- data.clean[,c(3,5,6,7,8,9,11,12,15,16,17,18,19,22,23,24,25,26)]
+
+table(data.variables$location.of.the.event) 
+#csq -> we need to combine several categories for location of the event variable
+
+table(data.variables$emergency.vehicle.type)
+#csq -> we need to combine several categories for emergency vehicle type variable
+
+table(data.variables$rescue.center)
+#csq -> we need to combine several categories for rescue center variable
+
+#csq -> we need to combine several categories for emergency vehicle type variabledata.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
 data.quali <- data.variables[,-c(3,5,6,10,12,13,14,15,16,17,18)]
+colnames(data.quali)
+
+#csq -> we need to combine several categories for emergency vehicle type variabledata.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
+data.quanti.cor <- data.variables[,-c(1,2,4,7,8,9,11)]
+colnames(data.quanti.cor)
 ```
 #coorelation
 ### Correlation analysis
@@ -770,31 +792,28 @@ Let us plot distribution of Class for the most correlated features to the the ta
 
 ***
 
-
-
-
-
-
 ```{r}
-cor(data.quanti)
+cor(data.quanti.cor)
 ```
-#we analyse the variables greater than 0.95 and we keep the one which is the more correlated to Y
+We analyse the variables greater than 0.95 and we keep the one which is the more correlated to Y
 
-#1
-#Longitude.intervention  and longitude.before.departure are very correlated 0,98 > 0,95
-#We keep Longitutde intervention and Y 0,057
-#We don't keep longitude.before.departure 
+1.
+Longitude.intervention  and longitude.before.departure are very correlated 0,98 > 0,95
+We keep Longitutde intervention and Y 0,057
+We don't keep longitude.before.departure 
 
-#2
-#latitude.intervention and latitude.before.departure are very correlated 0,98 > 0,95
-#We don't keep latitude.intervention and Y  0.016
-#We keep latitude.before.departure
-
-
+2.
+Latitude.intervention and latitude.before.departure are very correlated 0,98 > 0,95
+We don't keep latitude.intervention and Y  0.016
+We keep latitude.before.departure
 
 ```{r}
 data.variables.without.cor <- data.variables[,-c(12,13)]
 str(data.variables.without.cor)
+
+data.quanti.without.cor <- data.variables.without.cor[,-c(1,2,4,7,8,9,11)]
+
+cor(data.quanti.without.cor)
 ```
   
  
@@ -824,7 +843,7 @@ data.variables.without.cor <- na.omit(data.variables.without.cor)
 
 Split data: train et test
 On predict sur le test du train. 
-Faire comparaison de mod�le. 
+Faire comparaison de mod?le. 
 
 
 On garde x_test pour le final predict
@@ -832,82 +851,218 @@ On garde x_test pour le final predict
 ```{r}
 #Linear Regression,
 str(data.variables.without.cor)
+
+options(max.print = 10000)
+
 lm <- lm(delta.selection.presentation ~ 
-           floor 
-         +  longitude.intervention
+           alert.reason.category
+         + intervention.on.public.roads
+         + floor
+         + location.of.the.event
+         + longitude.intervention
          + latitude.intervention
+         + emergency.vehicle.type
+         + rescue.center
+         + status.preceding.selection
          + delta.status.preceding.selection.selection
-         +OSRM.estimated.distance
-         +OSRM.estimated.duration
-         +alert.reason.category
-         +intervention.on.public.roads
-         +location.of.the.event
-         +emergency.vehicle.type
-         +rescue.center
-         +status.preceding.selection
-         +departed.from.its.rescue.center
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
            ,data = data.variables.without.cor)
 
 summary(lm)
-options(max.print = 10000)
+
 
 ```
 # We can remove the rescue center because he has the higher pvalue
 ```{r}
 lm1 <- lm(delta.selection.presentation ~ 
-           floor 
-         +  longitude.intervention
+           alert.reason.category
+         + intervention.on.public.roads
+         + floor
+         + location.of.the.event
+         + longitude.intervention
          + latitude.intervention
+         + emergency.vehicle.type
+         + status.preceding.selection
          + delta.status.preceding.selection.selection
-         +OSRM.estimated.distance
-         +OSRM.estimated.duration
-         +alert.reason.category
-         +intervention.on.public.roads
-         +location.of.the.event
-         +emergency.vehicle.type
-         +status.preceding.selection
-         +departed.from.its.rescue.center
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
            ,data = data.variables.without.cor)
+
 summary(lm1)
 ```
 
 # We  remove the departed.from.its.rescue.center because he has the higher pvalue
 ```{r}
 lm2 <- lm(delta.selection.presentation ~ 
-           floor 
-         +  longitude.intervention
+           alert.reason.category
+         + intervention.on.public.roads
+         + floor
+         + location.of.the.event
+         + longitude.intervention
          + latitude.intervention
+         + emergency.vehicle.type
+         + status.preceding.selection
          + delta.status.preceding.selection.selection
-         +OSRM.estimated.distance
-         +OSRM.estimated.duration
-         +alert.reason.category
-         +intervention.on.public.roads
-         +location.of.the.event
-         +emergency.vehicle.type
-         +status.preceding.selection
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
            ,data = data.variables.without.cor)
+
 summary(lm2)
 ```
 
-```{r}
-vif(lm2)
-cor(data.quanti)
-```
+# Multicolinéarity 
 
 ```{r}
+library(car)
+
+vif(lm2)
+
+cor(data.quanti.without.cor)
+
 lm3 <- lm(delta.selection.presentation ~ 
-           floor 
-         +  longitude.intervention
+           alert.reason.category
+         + intervention.on.public.roads
+         + floor
+         + location.of.the.event
+         + longitude.intervention
          + latitude.intervention
+         + emergency.vehicle.type
+         + status.preceding.selection
          + delta.status.preceding.selection.selection
-         +OSRM.estimated.distance
-         +alert.reason.category
-         +intervention.on.public.roads
-         +location.of.the.event
-         +emergency.vehicle.type
-         +status.preceding.selection
+         + OSRM.estimated.distance
            ,data = data.variables.without.cor)
+
 summary(lm3)
+
+vif(lm3)
+#variables qualitatives 
+
+```
+# Residuals analysis
+
+Study the residuals of the selected model
+What we've done is not enough to validate the model. We need to study the residuals
+if hypothesis are not validated (see course.), the test of the coefficient are false 
+Study the residuals of the selected model
+
+## Is residuals means 0?
+
+```{r}
+#mean of residuals
+summary(lm3$residuals) 
+```
+Yes it is !
+
+## Are residuals normally distributed?
+
+Normality test : shapiro test
+H0 : Normality and H1 : no normality
+```{r}
+
+shapiro.test(lm3$residuals)
+
+#Error in shapiro.test(regmult3$residuals) : la taille de l'échantillon doit être comprise entre 3 et 5000
+
+library(tseries)
+
+jarque.bera.test(lm3$residuals)
+
+#install.packages("nortest")
+library(nortest)
+ad.test(lm3$residuals)
+
+
+```
+
+No normality because p-value is << 5%. Here, residuals are not normally distributed. 
+NB : non normality could appear because of outliers. This is not the case here. 
+
+
+
+```{r}
+
+qqnorm(lm3$residuals)
+qqline(lm3$residuals)
+```
+
+## Are residuals homoskedastic?
+
+1. First model which is not considering heteroskedasticity
+
+```{r}
+
+plot(lm3$residuals~lm3$fitted)
+
+library(lmtest)
+
+# Breush Pagan test H0 : homoskedasticity against H1 : heteroskedasticity 
+
+bptest(lm3)
+
+```
+pvalue << 5%, we reject H0
+residuals are heteroskedastic
+
+In case of heteroskedasticity, we have to use a robust standard error estimator. Otherwise, all our t-tests will be wrong.
+
+
+2. Second model taking into account heteroskedasticity
+
+```{r}
+
+library(sandwich)
+
+#Calculate the robust covariance matrix
+
+vcov2 <- vcovHC(lm3, type = "HC1")
+
+coeftest(lm3, vcov. = vcov2)
+
+#The estimated value of the coefficients remains
+#the same but the value of the t-test changes.
+#A coefficient could be significant in the first
+#model and no more in the second
+```
+
+# Are the residuals correlated ?
+
+There are several tests for autocorrelation
+Durbin-Watson test is one of the most often used
+
+H0 : Residuals are non autocorrelated
+H1 : Residuals are autocorrelated
+
+1. First model which is not considering heteroskedasticity
+
+```{r}
+
+library(car)
+
+# Durbin Watson test where H0 : residuals are not autocorrelated against H1 : residuals are aucorrelated
+durbinWatsonTest (lm3,max.lag=1)
+
+# doesn't work....
+```
+
+2. Second model taking into account heteroskedasticity
+
+```{r}
+
+library(sandwich)
+
+#Calculate the robust covariance matrix
+
+vcov4 <- NeweyWest(lm3)
+
+coeftest(lm3, vcov. = vcov2)
+
+#The estimated value of the coefficients remains
+#the same but the value of the t-test changes.
+#A coefficient could be significant in the first
+#model and no more in the second
 ```
 
 Just for test 
