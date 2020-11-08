@@ -70,11 +70,7 @@ We hope that this notebook will have good results to the challenge and responds 
 As always, any feedback, questions, or constructive criticism are much appreciated.
 
 
-
-
 ## Features description
-
-
 
 
 **Input parameters (x_train.csv and x_test.csv):**
@@ -155,8 +151,9 @@ library(magrittr)
 library(data.table)
 library(sandwich)
 library(dplyr)
-library(DataExplorer)
 library(stringr)
+library(ggplot2)
+library(DataExplorer)
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -164,7 +161,7 @@ library(stringr)
 x_train <- read.csv("x_train.csv") %>% setDT
 y_train <- read.csv("y_train.csv") %>% setDT
 x_test <- read.csv("x_test.csv") %>% setDT
-View(x_train)
+#View(x_train)
 data <- cbind(x_train,y_train[,-1])#we don't keep id vehicule selection for no duplicate
 ```
 
@@ -175,7 +172,6 @@ Let's have an overview of the data sets using the *introduce* and *head* tools. 
 ```{r}
 plot_intro(data)
 ```
-
 
 ```{r}
 glimpse(data)
@@ -222,8 +218,6 @@ data <- data[,-24] # delete the column OSMR response json object
 data <- data[,-21] #delete the column delta position gps
 ```
 
-
-
 Same with x_test data
 ```{r}
 x_test<-x_test[,-24]
@@ -265,11 +259,8 @@ data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
 data$rescue.center <- as.factor(data$rescue.center)
 data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
 data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
-
 data$floor<-as.factor(data$floor)
 ```
-floor pas quali ? 
-
 
 Apply same in x_test
 ```{r}
@@ -284,7 +275,6 @@ x_test$departed.from.its.rescue.center  <- as.factor(x_test$departed.from.its.re
 x_test$floor<-as.factor(x_test$floor)
 
 ```
-
 
 
 Manage *Selection time 
@@ -304,9 +294,13 @@ data<-data[,-c("selection.time")]
 
 Store quali, quali and quali with Ys variables 
 ```{r}
-data.quali<-data[,c(3,4,5,7,11,12,15,17)]
-data.quanti.y<-data[,-c(3,4,5,7,11,12,15,17)] #with Ys
-data.quanti<-data[,-c(3,4,5,7,11,12,15,17,24,25,26)]
+str(data)
+
+data.quali<-data[,c(3,4,5,6,7,11,12,15,17)]
+
+data.quanti.y<-data[,-c(3,4,5,6,7,11,12,15,17)] #with Ys
+
+data.quanti<-data[,-c(3,4,5,6,7,11,12,15,17,24,25,26)]
 ```
 
 
@@ -336,8 +330,9 @@ summary(y_train[,-1])
 
 Extreme values for your Ys variables around 6 hours ! 
 
-Plot density distriubtion for time of vehicule selection
+Plot density distribution for time of vehicle selection
 ```{r}
+
 data %>%
   ggplot(aes(delta.selection.departure)) +
   geom_density(fill = "red", bins = 100) +
@@ -356,7 +351,7 @@ We find:
 
     Additionally, there is a strange delta-shaped peak of trip_duration just before the 1e5 seconds mark and even a few way above it:
     
-Plot density distriubtion the time to present to the place
+Plot density distribution the time to present to the place
 ```{r}
 data %>%
   ggplot(aes(delta.departure.presentation)) +
@@ -402,9 +397,6 @@ The 2 Ys are not corr between them
 
 
 ### 2.2.1 Manage outliers for Ys values
-
-
-
 
 Plot 
   delta.selection.departure
@@ -476,7 +468,6 @@ y_train %>%
 ```
 
 
-
 => Most of duration are between 0 to 20 min (1200 sec)
 We can set our outlier cleaning
 
@@ -507,10 +498,313 @@ pairs(delta.selection.departure~.,data=data.quanti.y.nogps,
    main="Simple Scatterplot Matrix")
 ```
 
+## 3. Explanatory data : Manage Outliers
 
 
+### 3.1 Verify data outliers
+
+#### 3.1.1 Quantitative Variables
+
+##### 3.1.1.1 Histograms
+```{r}
+
+which(is.na(data.quanti)) #check for NA values before starting
+#str(data.quanti)
+#str(data.quali)
+```
+
+```{r}
+hist(data.quanti$longitude.intervention, col="blue",main="Longitude intervention")
+```
+
+```{r}
+hist(data.quanti$latitude.intervention, col="blue",main="Latitude intervention")
+```
+
+```{r}
+hist(data.quanti$delta.status.preceding.selection.selection, col="blue",main="delta status preceding selection-selection")
+```
+
+```{r}
+hist(data.quanti$longitude.before.departure, col="blue",main="longitude before departure ")
+```
+
+```{r}
+hist(data.quanti$latitude.before.departure, col="blue",main="Latitude before departure ")
+```
+
+```{r}
+hist(data.quanti$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
+```
+
+```{r}
+hist(data.quanti$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
+```
+
+##### 3.1.1.2 Plot Variables Density Distribution 
+
+```{r}
+data.quanti %>%
+  ggplot(aes(longitude.intervention)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
 
 
+```{r}
+data.quanti %>%
+  ggplot(aes(latitude.intervention)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
+
+
+```{r}
+data.quanti %>%
+  ggplot(aes(delta.status.preceding.selection.selection)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
+
+
+```{r}
+data.quanti %>%
+  ggplot(aes(longitude.before.departure)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
+
+
+```{r}
+data.quanti %>%
+  ggplot(aes(latitude.before.departure)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
+
+
+```{r}
+data.quanti %>%
+  ggplot(aes(OSRM.estimated.distance)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
+
+
+```{r}
+data.quanti %>%
+  ggplot(aes(OSRM.estimated.duration)) +
+  geom_density(fill = "red", bins = 100) +
+  scale_x_log10() +
+  scale_y_sqrt() + 
+  theme_minimal()
+```
+
+##### 3.1.1.3 Boxplots
+
+```{r}
+boxplot(data.quanti$longitude.intervention, col="blue",main="Longitude intervention")
+```
+
+```{r}
+boxplot(data.quanti$latitude.intervention, col="blue",main="Latitude intervention")
+```
+
+```{r}
+boxplot(data.quanti$delta.status.preceding.selection.selection , col="blue",main="delta status preceding selection-selection")
+```
+
+```{r}
+boxplot(data.quanti$longitude.before.departure, col="blue",main="longitude before departure")
+```
+
+```{r}
+boxplot(data.quanti$latitude.before.departure, col="blue",main="latitude before departure")
+```
+
+```{r}
+boxplot(data.quanti$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
+```
+
+```{r}
+boxplot(data.quanti$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
+```
+
+##### 3.1.1.3 Manage Outliers 
+
+```{r}
+data.clean <- data[data$delta.status.preceding.selection.selection < 100000,]
+data.clean <- data[data$OSRM.estimated.duration < 1000,]
+
+#str(data.clean)
+
+#Assign the new value to data.quanti
+data.quanti<-data.clean[,-c(3,4,5,6,7,11,12,15,17,24,25,26)]
+
+```
+
+#### 3.1.2 Qualitative Variables
+
+##### 3.1.2.1 Tables 
+
+```{r}
+str(data.quali)
+```
+```{r}
+table(data.quali$alert.reason.category)
+prop.table(table(data.quali$alert.reason.category))
+```
+
+```{r}
+table(data.quali$alert.reason) 
+prop.table(table(data.quali$alert.reason))
+```
+Csq -> we need to combine several categories for alert reason variable
+
+```{r}
+table(data.quali$intervention.on.public.roads) 
+prop.table(table(data.quali$intervention.on.public.roads))
+```
+
+```{r}
+table(data.quali$floor) 
+prop.table(table(data.quali$floor))
+```
+Csq -> we need to combine several categories for floors
+
+```{r}
+table(data.quali$location.of.the.event) 
+prop.table(table(data.quali$location.of.the.event))
+```
+Csq -> we need to combine several categories for location of the event variable
+
+```{r}
+table(data.quali$emergency.vehicle.type)
+prop.table(table(data.quali$emergency.vehicle.type))
+```
+csq -> we need to combine several categories for emergency vehicle type variable
+
+```{r}
+table(data.quali$rescue.center)
+prop.table(table(data.quali$rescue.center))
+```
+csq -> we need to combine several categories for rescue center variable
+
+```{r}
+table(data.quali$status.preceding.selection)
+prop.table(table(data.quali$status.preceding.selection))
+```
+csq -> we need to combine several categories for status preceding selection variable
+
+```{r}
+table(data.quali$departed.from.its.rescue.center)
+prop.table(table(data.quali$departed.from.its.rescue.center))
+```
+csq -> we need to combine several categories for departed from its rescue center variable
+
+
+##### 3.1.2.2 Barplots 
+
+```{r}
+barplot(table(data.quali$alert.reason.category),horiz = F,cex.names=0.8,col="blue",main="Alert Reason Category",ylab="Frequency", plot=TRUE)
+```
+
+```{r}
+barplot(table(data.quali$alert.reason),horiz = F,cex.names=0.8,col="blue",main="Alert Reason Category",ylab="Frequency", plot=TRUE)
+```
+Csq -> we need to combine several categories for alert reason variable
+
+```{r}
+barplot(table(data.quali$intervention.on.public.roads),horiz = F,cex.names=0.8,col="blue",main="Intervention on public road",ylab="Frequency", plot=TRUE)
+```
+
+```{r}
+barplot(table(data.quali$floor),horiz = F,cex.names=0.8,col="blue",main="Floors",ylab="Frequency", plot=TRUE)
+```
+Csq -> we need to combine several categories for floors
+
+```{r}
+barplot(table(data.quali$location.of.the.event),horiz = F,cex.names=0.8,col="blue",main="Location of the event",ylab="Frequency", plot=TRUE)
+```
+Csq -> we need to combine several categories for location of the event variable
+
+```{r}
+barplot(table(data.quali$emergency.vehicle.type),horiz = F,cex.names=0.8,col="blue",main="Emergency Vehicle Type",ylab="Frequency", plot=TRUE)
+```
+csq -> we need to combine several categories for emergency vehicle type variable
+
+```{r}
+barplot(table(data.quali$rescue.center),horiz = F,cex.names=0.8,col="blue",main="Rescue center variable",ylab="Frequency", plot=TRUE)
+```
+csq -> we need to combine several categories for rescue center variable
+
+```{r}
+barplot(table(data.quali$status.preceding.selection),horiz = F,cex.names=0.8,col="blue",main="Emergency Vehicle Type",ylab="Frequency", plot=TRUE)
+```
+
+```{r}
+barplot(table(data.quali$departed.from.its.rescue.center),horiz = F,cex.names=0.8,col="blue",main="Departed from its rescue center",ylab="Frequency", plot=TRUE)
+```
+csq -> we need to combine several categories for departed from its rescue center variable
+
+
+##### 3.1.2.3 Group Together Categories With Low Frequency & Manage Outliers
+
+for the floor variable, group everything below -2 & everything after 10
+```{r}
+
+data.clean <- data[data$delta.status.preceding.selection.selection < 100000,]
+data.clean <- data[data$OSRM.estimated.duration < 1000,]
+
+table(data.clean$floor)
+
+levels(data.clean$floor) <- list("-2"=c("-10","-9","-6","-5","-4","-3", "-2"),
+                                 "-1"=c("-1"), "0"=c("0"), "1"=c("1"), "2"=c("2"), "3"=c("3"),
+                                  "4"=c("4"), "5"=c("5"), "6"=c("6"), "7"=c("7"), "8"=c("8"), "9"=c("9"), "10"=c("10"),
+                                  "11"=c("11"), "12"=c("12"), "13"=c("13"), "14"=c("14"), "15"=c("15"), "16"=c("16"),
+                                 "17"=c("17","18","19","20","21","22", "23", 
+                                        "24","25","26","27","28","29", "30", "31", "32", "33", "37", "52", "79", "100"))
+
+table(data.clean$floor)
+
+barplot(table(data.clean$floor),horiz = F,cex.names=0.8,col="blue",main="Floors",ylab="Frequency", plot=TRUE)
+
+data.quali<-data.clean[,c(3,4,5,6,7,11,12,15,17)]
+```
+
+#### 3.1.2 How top influencer predictors and speed correlate ? 
+
+```{r}
+data.clean %>%
+  ggplot(aes(x=alert.reason, y=OSRM.estimated.distance)) +
+  geom_boxplot()
+```
+
+
+```{r}
+data.clean %>%
+  ggplot(aes(x=rescue.center, y=OSRM.estimated.distance)) +
+  geom_boxplot()
+```
+
+
+```{r}
+data.clean %>%
+  ggplot(aes(x=alert.reason.category, y=OSRM.estimated.distance)) +
+  geom_boxplot()
+```
 
 ### GPS data [if time]
 
@@ -558,95 +852,7 @@ GPS.tracks.departure.presentation.lat %>% head
 ```
 
 
-
-
-#Explanatory Data
-
-```{r}
-str(data)
-data$location.of.the.event <- as.factor(data$location.of.the.event)
-data$intervention.on.public.roads <- as.factor(data$intervention.on.public.roads )
-data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
-data$rescue.center <- as.factor(data$rescue.center)
-data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
-data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
-```
-
-# We analyse the quantitatives variables
-#Histograms
-
-```{r}
-
-which(is.na(data))
-
-data.na = data
-
-hist(data.na$floor, col="blue",main="Floor")
-hist(data.na$longitude.intervention, col="blue",main="Longitude intervention")
-hist(data.na$latitude.intervention, col="blue",main="Latitutde intervention")
-hist(data.na$delta.status.preceding.selection.selection , col="blue",main="delta status preceding selection-selection")
-hist(data.na$delta.position.gps.previous.departure.departure, col="blue",main="delta position gps previous departure-departure (int)")
-hist(data.na$longitude.before.departure, col="blue",main="longitude before departure ")
-hist(data.na$latitude.before.departure, col="blue",main="Latitude before departure ")
-hist(data.na$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
-hist(data.na$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
-```
-
-```{r}
-hist(data.na$delta.selection.departure, col="blue",main="Delta selection departure")
-hist(data.na$delta.departure.presentation, col="blue",main="Delta departure presentation")
-hist(data.na$delta.selection.presentation, col="blue",main="Delta selection presentation")
-```
-# Boxplot
-```{r}
-boxplot(data.na$floor, col="blue",main="Floor") #Outliers > 40
-boxplot(data.na$longitude.intervention, col="blue",main="Longitude intervention")
-boxplot(data.na$latitude.intervention, col="blue",main="Latitutde intervention")
-boxplot(data.na$delta.status.preceding.selection.selection , col="blue",main="delta status preceding selection-selection") #Pas beau
-boxplot(data.na$longitude.before.departure, col="blue",main="longitude before departure ")
-boxplot(data.na$latitude.before.departure, col="blue",main="latitude before departure ")
-boxplot(data.na$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
-boxplot(data.na$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
-```
-
-
-```{r}
-#Y
-boxplot(data.na$delta.selection.departure, col="blue",main="Delta selection departure")
-boxplot(data.na$delta.departure.presentation, col="blue",main="Delta departure presentation")
-boxplot(data.na$delta.selection.presentation, col="blue",main="Delta selection presentation")
-```
-
-
-```{r}
-summary(data.na)
-```
-
-# We Manage outliers
-```{r}
-data.clean <- data.na[data.na$floor < 40,]
-data.clean <- data.clean[data.clean$delta.status.preceding.selection.selection < 100000,]
-data.clean <- data.clean[data.clean$delta.selection.departure < 800,]
-data.clean <- data.clean[data.clean$delta.departure.presentation< 2000,]
-data.clean <- data.clean[data.clean$OSRM.estimated.duration < 1000,]
-```
-
-```{r}
-summary(data.clean)
-```
-
-
-```{r}
-boxplot(data.clean$floor, col="blue",main="Floor")
-boxplot(data.clean$delta.selection.departure, col="blue",main="Delta status preceding selection")
-boxplot(data.clean$delta.status.preceding.selection.selection, col="blue",main="Delta status preceding selection")
-boxplot(data.clean$delta.departure.presentation , col="blue",main="Delta status departure selection")
-boxplot(data.clean$OSRM.estimated.duration, col="blue",main="OSMR duration")
-```
-
-
-
-# We transform variables
+# We transform variables [if time]
 ```{r}
 # transform variables
 data.clean$log.longitude.intervention <- log(data.clean$longitude.intervention)
@@ -734,53 +940,7 @@ qqnorm(data.clean$log.OSRM.estimated.duration, main="Normality log OSRM estimate
 qqline(data.clean$log.OSRM.estimated.duration)
 ```
 
-
-```{r}
-
-str(data.clean)
-
-#we don't keep 1, 2, 10, 13, 14, 20, 21
-
-colnames(data.clean)
-data.variables <- data.clean[,c(3,4,5,6,7,8,9,11,12,15,16,17,18,19,22,23,24,25,26)]
-str(data.variables)
-colnames(data.variables)
-
-str(data.variables)
-
-table(data.variables$alert.reason.category)
-
-table(data.variables$alert.reason) 
-#csq -> we need to combine several categories for alert reason variable
-#for the moment, we just take out this variable
-
-data.variables <- data.clean[,c(3,5,6,7,8,9,11,12,15,16,17,18,19,22,23,24,25,26)]
-colnames(data.variables)
-
-table(data.variables$location.of.the.event) 
-#csq -> we need to combine several categories for location of the event variable
-
-table(data.variables$emergency.vehicle.type)
-#csq -> we need to combine several categories for emergency vehicle type variable
-
-table(data.variables$rescue.center)
-#csq -> we need to combine several categories for rescue center variable
-
-table(data.variables$departed.from.its.rescue.center)
-
-levels(data.variables$departed.from.its.rescue.center)
-
-class(data.variables$departed.from.its.rescue.center)
-
-#csq -> we need to combine several categories for emergency vehicle type variabledata.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
-data.quali <- data.variables[,-c(3,5,6,10,12,13,14,15,16,17,18)]
-colnames(data.quali)
-
-#csq -> we need to combine several categories for emergency vehicle type variabledata.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
-data.quanti.cor <- data.variables[,-c(1,2,4,7,8,9,11)]
-colnames(data.quanti.cor)
-```
-#correlation
+## 4. correlation
 ### Correlation analysis
 
 ```{r warning=FALSE, collapse=TRUE}
@@ -803,7 +963,13 @@ Let us plot distribution of Class for the most correlated features to the the ta
 ***
 
 ```{r}
-cor(data.quanti.cor)
+str(data.quanti)
+
+data.quanti.nogps <- data.quanti[,c(-11, -12)] #delete gps columns
+
+str(data.quanti.nogps)
+
+cor(data.quanti.nogps)
 ```
 We analyse the variables greater than 0.95 and we keep the one which is the more correlated to Y
 
@@ -818,12 +984,11 @@ We don't keep latitude.intervention and Y  0.016
 We keep latitude.before.departure
 
 ```{r}
-data.variables.without.cor <- data.variables[,-c(12,13)]
+str(data.clean)
+
+data.variables.without.cor <- data.clean[,-c(18,19)]
 str(data.variables.without.cor)
 
-data.quanti.without.cor <- data.variables.without.cor[,-c(1,2,4,7,8,9,11)]
-
-cor(data.quanti.without.cor)
 ```
   
  
@@ -846,8 +1011,6 @@ data.variables.without.cor <- na.omit(data.variables.without.cor)
 #Etude de correlation, PCA pour réduire facteur et variable. 
 
 #Regrouper véhicule, ressources center, location of the event
-
-
 
 # OLS - Regression
 
@@ -930,7 +1093,7 @@ library(car)
 
 vif(lm2)
 
-cor(data.quanti.without.cor)
+#cor(data.quanti.without.cor)
 
 lm3 <- lm(delta.selection.presentation ~ 
            alert.reason.category
@@ -986,6 +1149,8 @@ ad.test(lm3$residuals)
 
 
 ```
+
+
 
 No normality because p-value is << 5%. Here, residuals are not normally distributed. 
 NB : non normality could appear because of outliers. This is not the case here. 
