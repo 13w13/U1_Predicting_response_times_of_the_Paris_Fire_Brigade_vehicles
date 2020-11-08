@@ -280,21 +280,26 @@ x_test$status.preceding.selection  <- as.factor(x_test$status.preceding.selectio
 x_test$departed.from.its.rescue.center  <- as.factor(x_test$departed.from.its.rescue.center)
 ```
 
-Convert *Selection time into Date format
+Manage *Selection time 
 
  * `selection time` (datetime): selection time of the emergency vehicle
             * `date key selection` (int): selection date in YYYYMMDD format
             * `time key selection` (int): selection time in HHMMSS format
+
+
+We can deleat selection time. We keep numeric format for date key selection and time key selection for now (more manageable for cor analysis and regression). 
+For EDA part, we could convert them into date and time format
+
+
 ```{r}
-data$selection.time<-data$selection.time %>% as.Date()
+data<-data[,-c("selection.time")]
 ```
 
-
-Then, let's store quanti and variable variable
+Store quali, quali and quali with Ys variables 
 ```{r}
-data.quali<-data[,c(3,4,5,7,11,12,16,18)]
-data.quanti.y<-data[,-c(3,4,5,7,11,12,16,18)] #with Ys
-data.quanti<-data[,-c(3,4,5,7,11,12,16,18,25,26,27)]
+data.quali<-data[,c(3,4,5,7,11,12,15,17)]
+data.quanti.y<-data[,-c(3,4,5,7,11,12,15,17)] #with Ys
+data.quanti<-data[,-c(3,4,5,7,11,12,15,17,24,25,26)]
 ```
 
 
