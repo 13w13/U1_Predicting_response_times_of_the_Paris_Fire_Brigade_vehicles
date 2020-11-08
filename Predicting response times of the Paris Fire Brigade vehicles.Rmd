@@ -156,6 +156,7 @@ library(data.table)
 library(sandwich)
 library(dplyr)
 library(DataExplorer)
+library(stringr)
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -202,7 +203,6 @@ We find :
 * **[TO PREDICT]** `delta selection-presentation `(int): elapsed time in seconds between the selection of the emergency vehicle and its presentation on the intervention scene (delta selection-departure + delta departure-presentation)
 
 
-
 ## 1.4 Missing values
 
 ```{r}
@@ -237,7 +237,7 @@ sum(is.na(x_test))
 Good proporition (around 5% of dataset), acceptable to omit those values. 
 
 ```{r}
-data.na <- na.omit(data)
+data <- na.omit(data)
 x_test<-na.omit(x_test)
 ```
 
@@ -247,6 +247,79 @@ y_train <- na.omit(y_train)
 x_train<-na.omit(x_train)
 ```
 
+
+## 1.5 Convert qualitative variables into factor
+```{r}
+data$alert.reason.category<- as.factor(data$alert.reason.category)
+data$alert.reason<-as.factor(data$alert.reason)
+data$location.of.the.event <- as.factor(data$location.of.the.event)
+data$intervention.on.public.roads <- as.factor(data$intervention.on.public.roads )
+data$emergency.vehicle.type <- as.factor(data$emergency.vehicle.type)
+data$rescue.center <- as.factor(data$rescue.center)
+data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
+data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
+```
+floor pas quali ? 
+
+
+Apply same in x_test
+```{r}
+x_test$alert.reason.category<- as.factor(x_test$alert.reason.category)
+x_test$alert.reason<-as.factor(x_test$alert.reason)
+x_test$location.of.the.event <- as.factor(x_test$location.of.the.event)
+x_test$intervention.on.public.roads <- as.factor(x_test$intervention.on.public.roads )
+x_test$emergency.vehicle.type <- as.factor(x_test$emergency.vehicle.type)
+x_test$rescue.center <- as.factor(x_test$rescue.center)
+x_test$status.preceding.selection  <- as.factor(x_test$status.preceding.selection)
+x_test$departed.from.its.rescue.center  <- as.factor(x_test$departed.from.its.rescue.center)
+```
+
+
+Then, let's store quanti and variable variable
+```{r}
+data.quali<-data[,c(3,4,5,7,11,12,16,18)]
+data.quanti.y<-data[,-c(3,4,5,7,11,12,16,18)] #with Ys
+data.quanti<-data[,-c(3,4,5,7,11,12,16,18,25,26,27)]
+```
+
+## 1.6 Convert GPS data
+First GPS.track.departure.presentation is stored as set of character lat and log
+```{r}
+data$GPS.tracks.departure.presentation %>% head
+```
+Let's convert it into 2 columns : 
+GPS.track.departure.presentation.lat
+GPS.track.departure.presentation.long
+
+
+Get metric in indicators Names : Using stringr library and str_extract_all in order to get in a matrix all what is inside parenthesis
+
+# Get the parenthesis and what is inside
+metrics <- as.data.frame(str_extract_all(GPS.track.departure.presentation.lat, "",.*$")", simplify = TRUE))
+
+```{r}
+GPS.track.departure.presentation.lat<-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+"))
+
+GPS.track.departure.presentation.lat %>% head
+
+GPS.track.departure.presentation.long<-as.data.frame(str_extract_all(data$GPS.tracks.departure.presentation, "[,^]+"))
+
+```
+
+```{r}
+
+# Get the parenthesis and what is inside
+GPS.track.departure.presentation.lat <-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+", simplify = TRUE))
+```
+
+```{r}
+GPS.track.departure.presentation.lat %>% head
+```
+
+
+```{r}
+GPS.tracks.departure.presentation.lat %>% head
+```
 
 # 2. EDA
 
@@ -317,7 +390,7 @@ around 8 to 10 mintues.
 
 In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
 
-### Manage outliers for Ys values
+### 2.2.1 Manage outliers for Ys values
 
 
 Box plot Ys 
@@ -363,7 +436,7 @@ y_train %>%
       between(delta.departure.presentation_minutes, 5, 10) ~ "5 to 10 minutes",
       between(delta.departure.presentation_minutes, 10, 15) ~ "10 to 15 minutes",
       between(delta.departure.presentation_minutes, 15, 20) ~ "15 to 20 minutes",
-      delta.departure.presentation_minutes >= 20 ~ "20 or more minutes"
+      delta.departure.presentation_minutes >= 20 ~ " 20 or more minutes"
     ),
     duration2_grp = factor(duration2_grp, 
                           levels = c("Less than 5 minutes", "5 to 10 minutes", "10 to 15 minutes", "15 to 20 minutes","20 or more minutes" ))
@@ -375,6 +448,56 @@ y_train %>%
   theme_minimal()
 ```
 
+Max 20 min
+
+```{r}
+y_train %>% 
+  mutate(
+      delta.selection.presentation_minutes = round(delta.selection.presentation / 60, 0),
+    duration3_grp = case_when(
+      between(delta.selection.presentation_minutes, 0,  5)  ~ "Less than 5 minutes",
+      between(delta.selection.presentation_minutes, 5, 10) ~ "5 to 10 minutes",
+      between(delta.selection.presentation_minutes, 10, 15) ~ "10 to 15 minutes",
+      between(delta.selection.presentation_minutes, 15, 20) ~ "15 to 20 minutes",
+      delta.selection.presentation_minutes >= 20 ~ " 20 or more minutes"
+    ),
+    duration3_grp = factor(duration3_grp, 
+                          levels = c("Less than 5 minutes", "5 to 10 minutes", "10 to 15 minutes", "15 to 20 minutes","20 or more minutes" ))
+  ) %>%
+  group_by(duration3_grp) %>% 
+  ggplot(aes(x=duration3_grp,group=duration3_grp)) + 
+  geom_bar(fill="#E41A1C") +
+  labs(x="Group", y="count") +
+  theme_minimal()
+```
+
+
+
+=> Most of duration are between 0 to 20 min (1200 sec)
+We can set our outlier cleaning
+
+
+
+```{r}
+
+```
+
+### 2.2.2 Relation anaylis between Y and other variables
+
+First, let's study  Y0 'selection-departure' vs feature vars
+
+data quanti + ys
+```{r}
+data.quali.y=data[,c(3,4,5,7,11,12,16,18,25,26,27)]
+```
+
+
+```{r}
+pairs(delta.selection.departure~.,data=data.quanti,
+   main="Simple Scatterplot Matrix")
+```
+
+scatter plot
 
 
 #Explanatory Data
@@ -407,14 +530,6 @@ hist(data.na$latitude.before.departure, col="blue",main="Latitude before departu
 hist(data.na$OSRM.estimated.distance, col="blue",main="OSRM estimated distance")
 hist(data.na$OSRM.estimated.duration, col="blue",main="OSRM estimated duration")
 ```
-
-
-
-
-
-
-
-
 
 
 
@@ -579,6 +694,32 @@ data.quanti <- data.variables[,c(3,5,6,10,12,13,14,15,16,17,18)]
 data.quali <- data.variables[,-c(3,5,6,10,12,13,14,15,16,17,18)]
 ```
 #coorelation
+### Correlation analysis
+
+```{r warning=FALSE, collapse=TRUE}
+corr<-rcorr(as.matrix(dataset))
+dataset_coeff = corr$r
+
+corrplot(dataset_coeff, method="square",type="upper", order="hclust", tl.col="black", tl.srt=45)
+```
+
+```{r warning=FALSE, collapse=TRUE}
+sort(dataset_coeff[,31],decreasing= TRUE )
+```
+We use the first graph and the attached table to identify the variables most correlated with the target. 
+
+Although we can notice that some features are highly correlated with each other (>0.5), we choose to keep them for more precision in our model.    
+   
+We observe that the variables **HTTPS** and **AnchorULR** are most the correlated to the target.   
+Let us plot distribution of Class for the most correlated features to the the target (HTTPS, AnchorURL,PrefixSuffix). 
+
+***
+
+
+
+
+
+
 ```{r}
 cor(data.quanti)
 ```
