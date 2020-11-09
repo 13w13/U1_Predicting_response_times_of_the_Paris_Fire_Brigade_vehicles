@@ -163,6 +163,12 @@ y_train <- read.csv("y_train.csv") %>% setDT
 x_test <- read.csv("x_test.csv") %>% setDT
 #View(x_train)
 data <- cbind(x_train,y_train[,-1])#we don't keep id vehicule selection for no duplicate
+
+#We rename a column which has a special caracter 
+c<- colnames(data)
+c[14] <- "date.key.selection"
+c[15] <- "time.key.selection"
+colnames(data) <- c
 ```
 
 
@@ -1068,16 +1074,17 @@ Interpretation a rajouter
 ### 4.2 Add month, day of week, morning, day,  night
 
 ```{r}
-data.fe$month <-month(as.Date(as.character(data.fe$date.key.sÃ.lection), "%Y%m%d"))
+data.fe$month <-month(as.Date(as.character(data.fe$date.key.selection), "%Y%m%d"))
 
-data.fe$weekdays <-weekdays(as.Date(as.character(data.fe$date.key.sÃ.lection), "%Y%m%d"))
+data.fe$weekdays <-weekdays(as.Date(as.character(data.fe$date.key.selection), "%Y%m%d"))
 ```
 
 
 
 
 ```{r}
-data.fe$hours <-as.hms(formatC(as.integer(data.fe$time.key.sÃ.lection), big.mark = ":", big.interval = 2L))
+inst
+data.fe$hours <-as.hms(formatC(as.integer(data.fe$time.key.selection), big.mark = ":", big.interval = 2L))
 
 data.fe$hours <- replace(data.fe$hours, is.na(data.fe$hours), "00:00:00")
 ```
@@ -1180,7 +1187,7 @@ No time so we decide to remove gps datas from our analysis.
 
 
 ```{r}
-data.fe<-
+head(data.fe$n)
 ```
 
 
@@ -1188,55 +1195,7 @@ data.fe<-
 data.fe %>% View
 ```
 
-
-```{r}
-data.fe$GPS.tracks.datetime.departure.presentation %>% head
-data.fe$GPS.tracks.departure.presentation %>% head
-```
-
-
 We have to do some feature enreginering with this data. 
-But if we have distance OSRM, is it not sufficiant ? 
-
-
-First GPS.track.departure.presentation is stored as a set of character lat and log. 
-
-* `GPS tracks departure-presentation` (float pair list): successive GPS positions (*longitude,latitude;longitude,latitude,* etc.) of the vehicle between departure and presentation. This information is for informational purposes to study vehicle behaviors. (The beacons, emitting the GPS positions of vehicles, are currently not always lit)
-
-
-```{r}
-data$GPS.tracks.departure.presentation %>% head
-```
-Let's convert it into 2 columns : 
-GPS.track.departure.presentation.lat
-GPS.track.departure.presentation.long
-
-
-
-```{r}
-str_extract_all(data$GPS.tracks.departure.presentation, "[,]+", simplify=TRUE)
-
-GPS.track.departure.presentation.lat<-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+"))
-
-GPS.track.departure.presentation.lat %>% head
-
-GPS.track.departure.presentation.long<-as.data.frame(str_extract_all(data$GPS.tracks.departure.presentation, "[,^]+"))
-
-```
-
-```{r}
-# Get the parenthesis and what is inside
-GPS.track.departure.presentation.lat <-(str_extract_all(data$GPS.tracks.departure.presentation, "[^,]+", simplify = TRUE))
-```
-
-```{r}
-GPS.track.departure.presentation.lat %>% head
-```
-
-
-```{r}
-GPS.tracks.departure.presentation.lat %>% head
-```
 
 
 ## 5. Correlation analysis
