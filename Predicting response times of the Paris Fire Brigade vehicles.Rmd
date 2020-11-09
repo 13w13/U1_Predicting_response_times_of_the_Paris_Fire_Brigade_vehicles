@@ -297,11 +297,11 @@ Store quali, quali and quali with Ys variables
 ```{r}
 str(data)
 
-data.quali<-data[,c(3,4,5,6,7,11,12,15,17)]
+data.quali<-data[,c(3,4,5,6,7,10,11,12,15,17)]
 
-data.quanti.y<-data[,-c(3,4,5,6,7,11,12,15,17)] #with Ys
+data.quanti.y<-data[,-c(3,4,5,6,7,10,11,12,15,17)] #with Ys
 
-data.quanti<-data[,-c(3,4,5,6,7,11,12,15,17,24,25,26)]
+data.quanti<-data[,-c(3,4,5,6,7,10,11,12,15,17,24,25,26)]
 ```
 
 
@@ -522,9 +522,8 @@ For instance, let's plot y0 vs alert.reason.category
 car::scatterplot(delta.selection.departure ~ OSRM.estimated.duration, data = foocor.all, 
                  smoother = TRUE, grid = TRUE)
 ```
-Here no clear linear correlation. Some slicly smooth trend. 
-But let's take delta. departure. presentation vs the OSRM estiamted duration. 
-
+Here we can see that there no clear linear correlation, maybe a some litlle smooth trend. 
+But let's take delta. departure. presentation vs the OSRM estimated duration. 
 
 ```{r}
 car::scatterplot(delta.departure.presentation~ OSRM.estimated.duration, data = foocor.all, 
@@ -534,26 +533,30 @@ We can observe a clear linear positive correlation. Normal since distance and ti
 
 
 
-Let's scattter plot matrix.  We just check the lines for ys vs other variables for now and try to identify visualy if there is some high explicative variable. 
+Let's scattter plot matrix.  We just check the first lines for **ys vs other variables** for now and try to identify visualy if there is some high independant explicative variable. 
+
+
+Let's start by Y0 'selection-departure' 
 
 Plot 5 first
 ```{r}
-pairs(delta.selection.departure~.,data=foocor.all[,c(1,2,3,4,5,22,23,24)],
+pairs(delta.selection.departure~.,data=foocor.all[,c(1,2,3,4,5,22)],
    main="Simple Scatterplot Matrix",lower.panel = NULL)
 
 ```
 
 We find : 
 
-It seems that we dont have clear linear cor. 
-
+It seems that we dont have clear linear correlation. Let's scatter plot the 5 next features. 
 
 5 next
 ```{r}
-pairs(delta.selection.departure~.,data=foocor.all[,c(6,7,8,9,10,11,22,23,24)],
+pairs(delta.selection.departure~.,data=foocor.all[,c(6,7,8,9,10,11,22)],
    main="Simple Scatterplot Matrix",lower.panel = NULL)
 
 ```
+
+Same. 
 
 5 next
 
@@ -562,13 +565,10 @@ pairs(delta.selection.departure~.,data=foocor.all[,c(12,13,14,15,16,17,22)],
    main="Simple Scatterplot Matrix",lower.panel = NULL)
 
 ```
+Same
 
-5 next
-```{r}
-pairs(delta.selection.departure~.,data=foocor.all[,c(12,13,14,15,16,17,22,23,24)],
-   main="Simple Scatterplot Matrix",lower.panel = NULL)
 
-```
+
 
 5 next
 ```{r}
@@ -576,15 +576,48 @@ pairs(delta.selection.departure~.,data=foocor.all[,c(18,19,20,21,22,23,24)],
    main="Simple Scatterplot Matrix",lower.panel = NULL)
 
 ```
-
+Same
 
 We find : 
-clear linear cor. 
-
-We will deeper our correlation analysis in next part. 
+no clear visual linear relation between yo and other features. We will deeper our correlation analysis in the 4. part. 
 
 
 
+Let's quickly check scatter plot matrix for delta.departure.presentaiton. 
+
+
+```{r}
+pairs(delta.departure.presentation~.,data=foocor.all[,c(1,2,3,4,5,23)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
+```
+Same
+
+```{r}
+pairs(delta.departure.presentation~.,data=foocor.all[,c(6,7,8,9,10,11,23)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
+```
+
+Same
+
+```{r}
+pairs(delta.departure.presentation~.,data=foocor.all[,c(12,13,14,15,16,17,23)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
+```
+Same
+
+```{r}
+pairs(delta.departure.presentation~.,data=foocor.all[,c(18,19,20,21,22,23)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
+```
+
+We find a linear correlation between y1 and OSRM estiamted estimated time and distance (which seems to be normal)
+
+We will deeper our correlation analysis in the 4part of EDA. 
+But first, let's manage outliers with some EDA with independant variables ! 
 
 
 ## 3. Explanatory data : Manage Outliers
@@ -598,8 +631,7 @@ We will deeper our correlation analysis in next part.
 ```{r}
 
 which(is.na(data.quanti)) #check for NA values before starting
-#str(data.quanti)
-#str(data.quali)
+
 ```
 
 ```{r}
@@ -737,11 +769,11 @@ boxplot(data.quanti$OSRM.estimated.duration, col="blue",main="OSRM estimated dur
 data.clean <- data[data$delta.status.preceding.selection.selection < 100000,]
 data.clean <- data[data$OSRM.estimated.duration < 1000,]
 
-#str(data.clean)
 
 #Assign the new value to data.quanti
-data.quanti<-data.clean[,-c(3,4,5,6,7,11,12,15,17,24,25,26)]
 
+data.quanti<-data.clean[,-c(3,4,5,6,7,10,11,12,15,17,24,25,26)]
+data.quanti.y<-data.clean[,-c(3,4,5,6,7,10,11,12,15,17)]
 ```
 
 #### 3.1.2 Qualitative Variables
@@ -751,6 +783,7 @@ data.quanti<-data.clean[,-c(3,4,5,6,7,11,12,15,17,24,25,26)]
 ```{r}
 str(data.quali)
 ```
+
 ```{r}
 table(data.quali$alert.reason.category)
 prop.table(table(data.quali$alert.reason.category))
@@ -1029,7 +1062,33 @@ qqnorm(data.clean$log.OSRM.estimated.duration, main="Normality log OSRM estimate
 qqline(data.clean$log.OSRM.estimated.duration)
 ```
 
-## 4. correlation
+### Feature engineering
+
+In this section we build new features from the existing ones, trying to find better predictors for our target variable. I prefer to define all these new features in a single code block below and then study them in the following subsections. This does not correspond to a linear analysis but it makes the notebook more readable and ensures that we don't miss any stray feature definitions.
+
+The new temporal features (date, month, wday, hour) are derived from the pickup_datetime. We got the JFK and La Guardia airport coordinates from Wikipedia. The blizzard feature is based on the external weather data.
+
+#### 4.1 
+
+speed
+
+#### 4.2 
+
+diff between estiamted duration and delta selection.presentation
+
+
+
+#### 4.3 
+order of the brigade to leave. 
+
+```{r}
+
+```
+
+
+### GPS data [if time]
+
+## 5. correlation
 ### Correlation analysis
 
 ```{r warning=FALSE, collapse=TRUE}
