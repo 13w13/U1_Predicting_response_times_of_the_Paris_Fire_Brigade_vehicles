@@ -153,7 +153,7 @@ library(sandwich)
 library(dplyr)
 library(stringr)
 library(ggplot2)
-library(DataExplorer)
+#library(DataExplorer)
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -849,6 +849,39 @@ GPS.track.departure.presentation.lat %>% head
 
 ```{r}
 GPS.tracks.departure.presentation.lat %>% head
+```
+#####PCA
+
+```{r}
+data.variables.PCA <- data.quanti[,-c(11,12)]
+data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
+```
+For the PCA, we analayse our quantify variables and we remove the GPS variables that aren't numerical
+We center the data
+
+```{r}
+res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=11, graph=F)
+summary(res.pca)
+```
+We can stop at Dimension 7 because we have reached a cumulative variance of 99%
+
+```{r}
+round(res.pca$eig,7)
+```
+The first 2 axes account for 40% of the total inertia. 
+```{r}
+inertia=res.pca$eig[,2]
+barplot(inertia,ylab="% Unertia",names.arg=round(inertia,7))+
+title("eigenvalues (inertias or variances of each component) in %")
+```
+
+```{r}
+res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=7, graph=F)
+graph.var (res.pca, new.plot=TRUE)
+```
+
+```{r}
+graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
 ```
 
 
