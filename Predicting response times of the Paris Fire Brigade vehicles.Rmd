@@ -843,6 +843,12 @@ csq -> we need to combine several categories for emergency vehicle type variable
 table(data.quali$rescue.center)
 prop.table(table(data.quali$rescue.center))
 ```
+
+```{r}
+data[data$rescue.center=="266323"]
+```
+
+
 csq -> we need to combine several categories for rescue center variable
 
 ```{r}
@@ -924,6 +930,23 @@ barplot(table(data.clean$floor),horiz = F,cex.names=0.8,col="blue",main="Floors"
 
 data.quali<-data.clean[,c(3,4,5,6,7,10,11,12,15,17)]
 ```
+
+#### Clean outliers for rescue.center
+
+266 281
+266 294
+266 296
+266 323 
+266 324 
+
+
+```{r}
+table(data.quali$rescue.center)
+```
+```{r}
+
+```
+
 
 ### 3.2. What is time difference between departure.presentation and OSRM estimated duration ? 
 
@@ -1073,7 +1096,7 @@ data.fe.sample %>%
 Interpretation a rajouter
 
 
-### 4.2 Add month, day of week, morning, day,  night
+### 4.2 Add month, day of week
 
 ```{r}
 data.fe$month <-month(as.Date(as.character(data.fe$date.key.selection), "%Y%m%d"))
@@ -1189,7 +1212,7 @@ data.fe<-data.fe[,-c(1)]
 ### 4.4 GPS
 We decide to remove GPS data since we have the same data. 
 ```{r}
-data.fe<-data.fe[,-c(16,17)]
+data.fe<-data.fe[,-c(18,19)]
 ```
 
 ## 5. Correlation analysis
@@ -1269,13 +1292,15 @@ data.fe %>%
 
 We find : 
 
-- alert reason is correlated to alert reason.category (0,65). We can remove alert.reason
+- alert reason is correlated to alert reason.category (0,65).
 - OSRM estimated speed and OSRM distance are correlated (this is quite normal). We decide to keep the 2 features. 
 - Statut departure before selection and departed from its rescue center are perfectly correlated. We remove statut departure before selection. 
+- longitude.before.departure and longititude.intervention are highly correlated. We can remove longitude.before.departure
+-latitude.before.departure and lat.intervention are highly correlated. We can remove lat.before.departure
 - Except for ORSM features, there is no high correlated feature. 
 
 ```{r}
-data.fe<-data.fe[,-c("alert.reason","status.preceding.selection")]
+data.fe<-data.fe[,-c("alert.reason","status.preceding.selection","longitude.before.departure","latitude.before.departure")]
 ```
 
 ##### PCA
@@ -1358,72 +1383,51 @@ graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
 
 
 
-Qualitatives variables 
-```{r}
-tapply(data.clean$delta.departure.presentation, data.clean$alert.reason.category, summary)
-bartlett.test(data.clean$delta.departure.presentation, data.clean$alert.reason.category)
-bartlett.test(data.clean$delta.departure.presentation, data.clean$intervention.on.public.roads) #pvalue <0,05
-bartlett.test(data.clean$delta.departure.presentation, data.clean$status.preceding.selection) #pvalue <0,05
-bartlett.test(data.clean$delta.departure.presentation, data.clean$departed.from.its.rescue.center)#pvalue <0,05
-bartlett.test(data.clean$delta.departure.presentation, data.clean$month)#pvalue <0,05
+## 6. OLS - Regression
 
-data.clean$departed.from.its.rescue.center
+
+### 6.1 Split data
+
+Store final dataset
+```{r}
+dataset<-data.fe
 ```
 
-```{r}
-data.variables.without.cor <- na.omit(data.variables.without.cor)
-```
-
-
-## OLS - Regression
-
-### Split data
-
+We split data. We will keep x_test for final prediction
 ```{r}
 dataset$Sample <- create.samples(data.fe, est = 0.70, val = 0.30, rand.seed = 1)
 trainingset<-dataset[dataset$Sample=="Estimation",]
 testset<-dataset[dataset$Sample=="Validation",]
-trainingset<-trainingset[,-32]
-testset<-testset[,-32]
 
+trainingset<-trainingset[,-23]
+testset<-testset[,-23]
 
 ```
 
 
-Split data: train et test
-On predict sur le test du train. 
-Faire comparaison de modele 
+### 6.2 Yo : Selection - Departure
 
+Remove id variables
+```{r}
+trainingset<-trainingset[,-c("emergency.vehicle.selection","emergency.vehicle")]
+```
 
-On garde x_test pour le final predict
 
 ```{r}
 #Linear Regression,
-str(data.variables.without.cor)
 
 options(max.print = 10000)
 
-lm <- lm(delta.selection.presentation ~ 
-           alert.reason.category
-         + intervention.on.public.roads
-         + floor
-         + location.of.the.event
-         + longitude.intervention
-         + latitude.intervention
-         + emergency.vehicle.type
-         + rescue.center
-         + status.preceding.selection
-         + delta.status.preceding.selection.selection
-         + departed.from.its.rescue.center
-         + OSRM.estimated.distance
-         + OSRM.estimated.duration
-           ,data = data.variables.without.cor)
+lm <- lm(delta.selection.departure ~.,data = trainingset)
 
 summary(lm)
 
 
 ```
-# We can remove the rescue center because he has the higher pvalue
+
+
+
+We can remove the rescue center because he has the higher pvalue
 ```{r}
 lm1 <- lm(delta.selection.presentation ~ 
            alert.reason.category
@@ -1443,7 +1447,7 @@ lm1 <- lm(delta.selection.presentation ~
 summary(lm1)
 ```
 
-# We  remove the departed.from.its.rescue.center because he has the higher pvalue
+We  remove the departed.from.its.rescue.center because he has the higher pvalue
 ```{r}
 lm2 <- lm(delta.selection.presentation ~ 
            alert.reason.category
@@ -1462,7 +1466,7 @@ lm2 <- lm(delta.selection.presentation ~
 summary(lm2)
 ```
 
-# Multicolinéarity 
+Multicolinéarity 
 
 ```{r}
 library(car)
@@ -1490,14 +1494,14 @@ vif(lm3)
 #variables qualitatives 
 
 ```
-# Residuals analysis
+Residuals analysis
 
 Study the residuals of the selected model
 What we've done is not enough to validate the model. We need to study the residuals
 if hypothesis are not validated (see course.), the test of the coefficient are false 
 Study the residuals of the selected model
 
-## Is residuals means 0?
+Is residuals means 0?
 
 ```{r}
 #mean of residuals
@@ -1505,7 +1509,7 @@ summary(lm3$residuals)
 ```
 Yes it is !
 
-## Are residuals normally distributed?
+#### Are residuals normally distributed?
 
 Normality test : shapiro test
 H0 : Normality and H1 : no normality
@@ -1539,7 +1543,7 @@ qqnorm(lm3$residuals)
 qqline(lm3$residuals)
 ```
 
-## Are residuals homoskedastic?
+#### Are residuals homoskedastic?
 
 1. First model which is not considering heteroskedasticity
 
@@ -1578,7 +1582,7 @@ coeftest(lm3, vcov. = vcov2)
 #model and no more in the second
 ```
 
-# Are the residuals correlated ?
+#### Are the residuals correlated ?
 
 There are several tests for autocorrelation
 Durbin-Watson test is one of the most often used
