@@ -297,8 +297,9 @@ data<-data[,-c("selection.time")]
 Store quali, quali and quali with Ys variables 
 ```{r}
 str(data)
-
+colnames(data)
 data.quali<-data[,c(3,4,5,6,7,10,11,12,15,17)]
+
 
 data.quanti.y<-data[,-c(3,4,5,6,7,10,11,12,15,17)] #with Ys
 
@@ -771,7 +772,7 @@ data.clean <- data[data$OSRM.estimated.duration < 1000,]
 
 
 #Assign the new value to data.quanti
-
+colnames(data.clean)
 data.quanti<-data.clean[,-c(3,4,5,6,7,10,11,12,15,17,24,25,26)]
 data.quanti.y<-data.clean[,-c(3,4,5,6,7,10,11,12,15,17)]
 ```
@@ -1075,6 +1076,46 @@ It is worth to take into account that it might be a corr between the order of th
 
 ### 4.3 Add month, day of week, morning, day,  night
 
+```{r}
+data.fe$month <- month(as.Date(as.character(data.fe$date.key.sélection), "%Y%m%d"))
+data.fe$weekdays <- weekdays(as.Date(as.character(data.fe$date.key.sélection), "%Y%m%d"))
+install.packages("hms")
+library(hms)
+
+data.fe$hours <- as.hms(formatC(as.integer(data.fe$time.key.sélection), big.mark = ":", big.interval = 2L))
+install.packages("imputeTS")
+data.fe$hours <- replace(data.quali$hours, is.na(data.quali$hours), "00:00:00")
+data.fe$hours <- substr(data.quali$hours, 1, 2)
+
+```
+
+```{r}
+table(data.quali$month)
+prop.table(table(data.quali$month))
+```
+
+```{r}
+barplot(table(data.fe$month),horiz = F,cex.names=0.8,col="blue",main="Month",ylab="Frequency", plot=TRUE)
+```
+
+```{r}
+table(data.fe$weekdays)
+prop.table(table(data.fe$weekdays))
+```
+
+```{r}
+barplot(table(data.fe$weekdays),horiz = F,cex.names=0.8,col="blue",main="Day",ylab="Frequency", plot=TRUE)
+```
+
+
+```{r}
+table(data.fe$hours)
+prop.table(table(data.fe$hours))
+```
+
+```{r}
+barplot(table(data.fe$hours),horiz = F,cex.names=0.8,col="blue",main="Hours",ylab="Frequency", plot=TRUE)
+```
 
 
 add time and date as factor var
