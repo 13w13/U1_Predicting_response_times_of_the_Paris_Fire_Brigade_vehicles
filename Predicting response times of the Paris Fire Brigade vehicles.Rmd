@@ -11,8 +11,6 @@ output:
 ---
 
 
-
-
 Liens notebook inspiration artistique : 
 Les notebooks qui ont déja fait le challenge : 
 https://github.com/quachn/X_PFB
@@ -153,7 +151,7 @@ library(sandwich)
 library(dplyr)
 library(stringr)
 library(ggplot2)
-#library(DataExplorer)
+library(DataExplorer)
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -260,6 +258,8 @@ data$rescue.center <- as.factor(data$rescue.center)
 data$status.preceding.selection  <- as.factor(data$status.preceding.selection)
 data$departed.from.its.rescue.center  <- as.factor(data$departed.from.its.rescue.center)
 data$floor<-as.factor(data$floor)
+data$emergency.vehicle<-as.factor(data$emergency.vehicle)
+
 ```
 
 Apply same in x_test
@@ -273,6 +273,7 @@ x_test$rescue.center <- as.factor(x_test$rescue.center)
 x_test$status.preceding.selection  <- as.factor(x_test$status.preceding.selection)
 x_test$departed.from.its.rescue.center  <- as.factor(x_test$departed.from.its.rescue.center)
 x_test$floor<-as.factor(x_test$floor)
+x_test$emergency.vehicle<-as.factor(x_test$emergency.vehicle)
 
 ```
 
@@ -375,9 +376,21 @@ around 8 to 10 mintues.
 In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
 
 
-Box plots Ys 
-```{r}
 
+Box plots Ys 
+
+For delta.selection.departure
+```{r}
+data %>% 
+  ggplot(aes(delta.selection.departure)) +
+  geom_boxplot() 
+```
+
+
+```{r}
+data %>% 
+  ggplot(aes(delta.departure.presentation)) +
+  geom_boxplot() 
 ```
 
 
@@ -472,31 +485,107 @@ y_train %>%
 We can set our outlier cleaning
 
 
-
 ```{r}
-
+data<- data[data$delta.selection.departure < 1200,]
+data<-data[data$delta.departure.presentation < 1200,]
+data<-data[data$delta.selection.presentation < 1200,]
 ```
+
+
+
 
 ### 2.2.2 Relation anaylis between Y and other variables
+In this part, we will first try to check if there is relation between our dependant variables and the depedant
 
-First, let's study  Y0 'selection-departure' vs feature vars
+Let's study  Y0 'selection-departure', Y1'departure-presentation',Y2'selection-presentation' vs feature vars
 
-data quanti and y execpt GPS data
+data and y without GPS data
+
+```{r}
+data.nogps<-data[,-c(21,20)]
+```
+
+
+We sample data in 3000 observations for scatter plot
+
+```{r}
+set.seed(1234)
+foocor.all <- sample_n(data.nogps, 3000)
+```
+
+Let's use here scatter plot. Scatter plot are plotted along two axes, the pattern of the resulting points revealing any correlation present. One pattern of special interest is a linear pattern, where the data has a general look of a line going uphill or downhill. L
+
+
+For instance, let's plot y0 vs alert.reason.category
+
+```{r}
+car::scatterplot(delta.selection.departure ~ OSRM.estimated.duration, data = foocor.all, 
+                 smoother = TRUE, grid = TRUE)
+```
+Here no clear linear correlation. Some slicly smooth trend. 
+But let's take delta. departure. presentation vs the OSRM estiamted duration. 
 
 
 ```{r}
-data.quanti.y.nogps<-data.quanti.y[,-c(13,14)]
+car::scatterplot(delta.departure.presentation~ OSRM.estimated.duration, data = foocor.all, 
+                 smoother = TRUE, grid = TRUE)
+```
+We can observe a clear linear positive correlation. Normal since distance and time of presentation are correlated. 
+
+
+
+Let's scattter plot matrix.  We just check the lines for ys vs other variables for now and try to identify visualy if there is some high explicative variable. 
+
+Plot 5 first
+```{r}
+pairs(delta.selection.departure~.,data=foocor.all[,c(1,2,3,4,5,22,23,24)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
 ```
 
+We find : 
+
+It seems that we dont have clear linear cor. 
+
+
+5 next
 ```{r}
-data.quanti.y.nogps %>% head
+pairs(delta.selection.departure~.,data=foocor.all[,c(6,7,8,9,10,11,22,23,24)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
 ```
 
-scatter plot
+5 next
+
 ```{r}
-pairs(delta.selection.departure~.,data=data.quanti.y.nogps,
-   main="Simple Scatterplot Matrix")
+pairs(delta.selection.departure~.,data=foocor.all[,c(12,13,14,15,16,17,22)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
 ```
+
+5 next
+```{r}
+pairs(delta.selection.departure~.,data=foocor.all[,c(12,13,14,15,16,17,22,23,24)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
+```
+
+5 next
+```{r}
+pairs(delta.selection.departure~.,data=foocor.all[,c(18,19,20,21,22,23,24)],
+   main="Simple Scatterplot Matrix",lower.panel = NULL)
+
+```
+
+
+We find : 
+clear linear cor. 
+
+We will deeper our correlation analysis in next part. 
+
+
+
+
 
 ## 3. Explanatory data : Manage Outliers
 
@@ -850,39 +939,6 @@ GPS.track.departure.presentation.lat %>% head
 ```{r}
 GPS.tracks.departure.presentation.lat %>% head
 ```
-#####PCA
-
-```{r}
-data.variables.PCA <- data.quanti[,-c(11,12)]
-data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
-```
-For the PCA, we analayse our quantify variables and we remove the GPS variables that aren't numerical
-We center the data
-
-```{r}
-res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=11, graph=F)
-summary(res.pca)
-```
-We can stop at Dimension 7 because we have reached a cumulative variance of 99%
-
-```{r}
-round(res.pca$eig,7)
-```
-The first 2 axes account for 40% of the total inertia. 
-```{r}
-inertia=res.pca$eig[,2]
-barplot(inertia,ylab="% Unertia",names.arg=round(inertia,7))+
-title("eigenvalues (inertias or variances of each component) in %")
-```
-
-```{r}
-res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=7, graph=F)
-graph.var (res.pca, new.plot=TRUE)
-```
-
-```{r}
-graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
-```
 
 
 # We transform variables [if time]
@@ -1024,6 +1080,45 @@ str(data.variables.without.cor)
 
 ```
   
+
+
+
+##### PCA
+
+```{r}
+data.variables.PCA <- data.quanti[,-c(11,12)]
+data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
+```
+For the PCA, we analayse our quantify variables and we remove the GPS variables that aren't numerical
+We center the data
+
+```{r}
+res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=11, graph=F)
+summary(res.pca)
+```
+We can stop at Dimension 7 because we have reached a cumulative variance of 99%
+
+```{r}
+round(res.pca$eig,7)
+```
+The first 2 axes account for 40% of the total inertia. 
+```{r}
+inertia=res.pca$eig[,2]
+barplot(inertia,ylab="% Unertia",names.arg=round(inertia,7))+
+title("eigenvalues (inertias or variances of each component) in %")
+```
+
+```{r}
+res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=7, graph=F)
+graph.var (res.pca, new.plot=TRUE)
+```
+
+```{r}
+graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
+```
+
+
+
  
 #Qualitatives variables 
 ```{r}
