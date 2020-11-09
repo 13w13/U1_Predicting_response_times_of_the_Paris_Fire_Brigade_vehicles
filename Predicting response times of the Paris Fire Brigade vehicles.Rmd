@@ -154,6 +154,12 @@ library(ggplot2)
 library(DataExplorer)
 library(hms)
 library(imputeTS)
+library(leaflet)
+library(Hmisc)
+library(FactoMineR)
+library(BCA)
+
+
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -935,9 +941,8 @@ There is also min value which means that the brigate can also drive quickier tha
 
 
 
-#### Normality study [if time]
-```{r}
-# transform variables
+Normality study [if time]
+transform variables
 data.clean$log.longitude.intervention <- log(data.clean$longitude.intervention)
 data.clean$log.latitude.intervention<- log(data.clean$latitude.intervention)
 data.clean$log.delta.status.preceding.selection.selection <- log(data.clean$delta.status.preceding.selection.selection)
@@ -946,10 +951,9 @@ data.clean$log.longitude.before.departure <- log(data.clean$longitude.before.dep
 data.clean$log.latitude.before.departure <- log(data.clean$latitude.before.departure)
 data.clean$log.OSRM.estimated.distance <- log(data.clean$OSRM.estimated.distance)
 data.clean$log.OSRM.estimated.duration   <- log(data.clean$OSRM.estimated.duration)
-```
 
-```{r}
-# Histograms
+
+Histograms
 hist(data.clean$log.longitude.intervention, col="blue",main="Log longitude intervention")
 hist(data.clean$log.latitude.intervention, col="blue",main=" Log Latitutde intervention")
 hist(data.clean$log.delta.status.preceding.selection.selection , col="blue",main=" Log delta status preceding selection-selection")
@@ -958,10 +962,9 @@ hist(data.clean$log.longitude.before.departure, col="blue",main="Log longitude b
 hist(data.clean$log.latitude.before.departure, col="blue",main="Log Latitude before departure ")
 hist(data.clean$log.OSRM.estimated.distance, col="blue",main="Log OSRM estimated distance")
 hist(data.clean$log.OSRM.estimated.duration, col="blue",main="Log OSRM estimated duration")
-```
 
-```{r}
-# Boxplot
+
+Boxplot
 boxplot(data.clean$log.longitude.intervention, col="blue",main="Log longitude intervention")
 boxplot(data.clean$log.latitude.intervention, col="blue",main=" Log Latitutde intervention")
 boxplot(data.clean$log.delta.status.preceding.selection.selection , col="blue",main=" Log delta status preceding selection-selection")
@@ -971,13 +974,12 @@ boxplot(data.clean$log.latitude.before.departure, col="blue",main="Log Latitude 
 boxplot(data.clean$log.OSRM.estimated.distance, col="blue",main="Log OSRM estimated distance")
 boxplot(data.clean$log.OSRM.estimated.duration, col="blue",main="Log OSRM estimated duration")
 summary(data.clean)
-```
 
-```{r}
-# Normality study
-# QQ Plot
-# when the variable is normally distributed
-# points are aligned on the first bisector
+
+Normality study
+QQ Plot
+when the variable is normally distributed
+points are aligned on the first bisector
 
 qqnorm(data.clean$floor, main="Normality floor")
 qqline(data.clean$floor)
@@ -994,13 +996,13 @@ qqline(data.clean$log.latitude.intervention)
 
 qqnorm(data.clean$delta.status.preceding.selection.selection, main="Normality delta status preceding selection-selection")
 qqline(data.clean$delta.status.preceding.selection.selection)
-#qqnorm(data.clean$log.delta.status.preceding.selection.selection, main="Normality log delta status preceding selection-selectio")
-#not possible
+qqnorm(data.clean$log.delta.status.preceding.selection.selection, main="Normality log delta status preceding selection-selectio")
+not possible
 
 qqnorm(data.clean$delta.position.gps.previous.departure.departure, main="Normality delta status preceding selection-selection")
 qqline(data.clean$delta.position.gps.previous.departure.departure)
-#qqnorm(data.clean$log.delta.position.gps.previous.departure.departure, main="Normality log delta status preceding selection-selection")
-#not possible
+qqnorm(data.clean$log.delta.position.gps.previous.departure.departure, main="Normality log delta status preceding selection-selection")
+not possible
 
 qqnorm(data.clean$longitude.before.departure, main="Normality longitude before departure")
 qqline(data.clean$longitude.before.departure)
@@ -1021,14 +1023,14 @@ qqnorm(data.clean$OSRM.estimated.duration, main="Normality OSRM estimated durati
 qqline(data.clean$OSRM.estimated.duration)
 qqnorm(data.clean$log.OSRM.estimated.duration, main="Normality log OSRM estimated duration")
 qqline(data.clean$log.OSRM.estimated.duration)
-```
 
-### 4. Feature engineering
+
+## 4. Feature engineering
 
 In this section we build new features from the existing ones, trying to find better predictors for our target variable. We prefer to define all these new features in a saingle code block below and then study them in the following subsections. 
 
 
-#### 4.1: Speed [km/h]
+### 4.1: Speed [km/h]
 
 esimated speed by OSRM
 distance / time
@@ -1083,7 +1085,6 @@ data.fe$weekdays <-weekdays(as.Date(as.character(data.fe$date.key.selection), "%
 
 
 ```{r}
-inst
 data.fe$hours <-as.hms(formatC(as.integer(data.fe$time.key.selection), big.mark = ":", big.interval = 2L))
 
 data.fe$hours <- replace(data.fe$hours, is.na(data.fe$hours), "00:00:00")
@@ -1140,7 +1141,7 @@ data.fe$month <- as.factor(data.fe$month)
 ```
 
 
-#### 4.3 Order of the brigade
+### 4.3 Order of the brigade
 
 
 For the same event, multiple brigade can leave. 
@@ -1172,99 +1173,169 @@ a %>% str
 ```{r}
 data.fe<-merge(a,data.fe, by.x = 'intervention', by.y = 'intervention', all=FALSE)
 ```
-remove extra column
-```{r}
-```
 rename and convert as factor
 
 ```{r}
 data.fe$n<-data.fe$n %>% as.factor
 ```
-
-### 4.4 : GPS data and Json ? [if time]
-
-No time so we decide to remove gps datas from our analysis. 
-
+Now that we have intervention frequency as factor, we can remove intervention ID
 
 ```{r}
-head(data.fe$n)
+data.fe<-data.fe[,-c(1)]
 ```
 
 
+
+### 4.4 GPS
+We decide to remove GPS data since we have the same data. 
 ```{r}
-data.fe %>% View
+data.fe<-data.fe[,-c(16,17)]
 ```
-
-We have to do some feature enreginering with this data. 
-
 
 ## 5. Correlation analysis
+update data.quanti and data.quali
+```{r}
+colnames(data.fe)
+str(data.fe)
 
-```{r warning=FALSE, collapse=TRUE}
-corr<-rcorr(as.matrix(dataset))
-dataset_coeff = corr$r
+data.quanti<-data.fe[,c(21,17,16,14,9,8,2)]
 
-corrplot(dataset_coeff, method="square",type="upper", order="hclust", tl.col="black", tl.srt=45)
+data.quanti.y<-data.fe[,c(21,20,19,18,17,16,14,9,8,2)]
+
+data.quali<-data.fe[,-c(21,20,19,18,17,16,14,9,8,2)]
+
+data.quali.y<-data.fe[,-c(21,17,16,14,9,8,2)]
+
 ```
 
-```{r warning=FALSE, collapse=TRUE}
-sort(dataset_coeff[,31],decreasing= TRUE )
-```
-We use the first graph and the attached table to identify the variables most correlated with the target. 
 
-Although we can notice that some features are highly correlated with each other (>0.5), we choose to keep them for more precision in our model.    
-   
-We observe that the variables **HTTPS** and **AnchorULR** are most the correlated to the target.   
-Let us plot distribution of Class for the most correlated features to the the target (HTTPS, AnchorURL,PrefixSuffix). 
+After engineering new features and before starting the modelling, we have to visualise the relations between our parameters using a correlation matrix. For this, we need to change all the factor features into a numerical format. The visualisation uses the corrplot function from the eponymous package. Corrplot gives us great flexibility in manipulating the style of our plot.
 
-***
+What we see below, are the colour-coded correlation coefficients for each combination of two features. In simplest terms: this shows whether two features are connected so that one changes with a predictable trend if you change the other. The closer this coefficient is to zero the weaker is the correlation. Both 1 and -1 are the ideal cases of perfect correlation and anti-correlation (dark blue and dark red in the plots below).
+
+Here, we are of course interested if and how strongly our correlate with the ys. But we also want to know whether our potential predictors are correlated among each other, so that we can reduce the collinearity in our data set and improve the robustness of our prediction.
+
 
 ```{r}
-str(data.quanti)
+data.fe %>%
+  select(-emergency.vehicle.selection) %>%
+  mutate(n = as.integer(n),
+         alert.reason = as.integer(alert.reason),
+         floor = as.integer(floor),
+         emergency.vehicle = as.integer(emergency.vehicle),
+         rescue.center = as.integer(rescue.center),
+         delta.selection.presentation = as.integer(delta.selection.presentation),
+         month = as.integer(month),
+         hours = as.integer(hours),
+        weekdays = as.integer(weekdays),
+         alert.reason.category = as.integer(alert.reason.category),
+         intervention.on.public.roads = as.integer(intervention.on.public.roads),
+         location.of.the.event = as.integer(location.of.the.event),
+         emergency.vehicle.type = as.integer(emergency.vehicle.type),
+         status.preceding.selection = as.integer(status.preceding.selection),
+          departed.from.its.rescue.center = as.integer(departed.from.its.rescue.center))%>%
 
-data.quanti.nogps <- data.quanti[,c(-11, -12)] #delete gps columns
+  cor(use="complete.obs", method = "spearman") %>%
+  corrplot(type="lower", method="pie",order="hclust", 
+         diag=FALSE)
 
-str(data.quanti.nogps)
-
-cor(data.quanti.nogps)
 ```
-We analyse the variables greater than 0.95 and we keep the one which is the more correlated to Y
-
-1.
-Longitude.intervention  and longitude.before.departure are very correlated 0,98 > 0,95
-We keep Longitutde intervention and Y 0,057
-We don't keep longitude.before.departure 
-
-2.
-Latitude.intervention and latitude.before.departure are very correlated 0,98 > 0,95
-We don't keep latitude.intervention and Y  0.016
-We keep latitude.before.departure
+Add coef
 
 ```{r}
-str(data.clean)
+data.fe %>%
+  select(-emergency.vehicle.selection) %>%
+  mutate(n = as.integer(n),
+         alert.reason = as.integer(alert.reason),
+         floor = as.integer(floor),
+         emergency.vehicle = as.integer(emergency.vehicle),
+         rescue.center = as.integer(rescue.center),
+         delta.selection.presentation = as.integer(delta.selection.presentation),
+         month = as.integer(month),
+         hours = as.integer(hours),
+        weekdays = as.integer(weekdays),
+         alert.reason.category = as.integer(alert.reason.category),
+         intervention.on.public.roads = as.integer(intervention.on.public.roads),
+         location.of.the.event = as.integer(location.of.the.event),
+         emergency.vehicle.type = as.integer(emergency.vehicle.type),
+         status.preceding.selection = as.integer(status.preceding.selection),
+          departed.from.its.rescue.center = as.integer(departed.from.its.rescue.center))%>%
 
-data.variables.without.cor <- data.clean[,-c(18,19)]
-str(data.variables.without.cor)
+  cor(use="complete.obs", method = "spearman") %>%
+  corrplot(type="lower", method="square",order="hclust", 
+         addCoef.col = "black", diag=FALSE)
 
 ```
-  
 
+We find : 
 
+- alert reason is correlated to alert reason.category (0,65). We can remove alert.reason
+- OSRM estimated speed and OSRM distance are correlated (this is quite normal). We decide to keep the 2 features. 
+- Statut departure before selection and departed from its rescue center are perfectly correlated. We remove statut departure before selection. 
+- Except for ORSM features, there is no high correlated feature. 
+
+```{r}
+data.fe<-data.fe[,-c("alert.reason","status.preceding.selection")]
+```
 
 ##### PCA
 
-```{r}
-data.variables.PCA <- data.quanti[,-c(11,12)]
-data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
-```
-For the PCA, we analayse our quantify variables and we remove the GPS variables that aren't numerical
+A voir si on garde pca
+
+For the PCA, we analayse our variables 
 We center the data
 
+
 ```{r}
-res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=11, graph=F)
-summary(res.pca)
+res.pca=PCA(data.fe, scale.unit=TRUE, ncp=11, graph=F,quali.sup =-c(21,20,19,18,17,16,14,9,8,2))
 ```
-We can stop at Dimension 7 because we have reached a cumulative variance of 99%
+
+Some error with quali variable. We will convert them into quanti
+
+```{r}
+data.variables.PCA <- data.fe %>%
+  select(-emergency.vehicle.selection) %>%
+  mutate(n = as.integer(n),
+         floor = as.integer(floor),
+         emergency.vehicle = as.integer(emergency.vehicle),
+         rescue.center = as.integer(rescue.center),
+         delta.selection.presentation = as.integer(delta.selection.presentation),
+         month = as.integer(month),
+         hours = as.integer(hours),
+        weekdays = as.integer(weekdays),
+         alert.reason.category = as.integer(alert.reason.category),
+         intervention.on.public.roads = as.integer(intervention.on.public.roads),
+         location.of.the.event = as.integer(location.of.the.event),
+         emergency.vehicle.type = as.integer(emergency.vehicle.type),
+          departed.from.its.rescue.center = as.integer(departed.from.its.rescue.center)) %>% setDT
+```
+
+
+```{r}
+data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
+```
+
+
+```{r}
+
+```
+
+
+The "variance" row gives the amount of variance (or "eigenvalue") in the original variables accounted for by each component.When a component has an eigenvalue greater than 1, it means that it contains more information (ie. explains more variance in the dataset) than one individual variable. 
+
+```{r}
+barplot(res.pca$eig[,1], main="Eigenvalues", names.arg=1:nrow(res.pca$eig))
+```
+
+
+We can stop at Dimension 19 because we have reached a cumulative variance of 99%
+
+
+```{r}
+dimdesc(res.pca)
+```
+
+
 
 ```{r}
 round(res.pca$eig,7)
@@ -1287,8 +1358,7 @@ graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
 
 
 
- 
-#Qualitatives variables 
+Qualitatives variables 
 ```{r}
 tapply(data.clean$delta.departure.presentation, data.clean$alert.reason.category, summary)
 bartlett.test(data.clean$delta.departure.presentation, data.clean$alert.reason.category)
@@ -1304,15 +1374,25 @@ data.clean$departed.from.its.rescue.center
 data.variables.without.cor <- na.omit(data.variables.without.cor)
 ```
 
-#Etude de correlation, PCA pour réduire facteur et variable. 
 
-#Regrouper véhicule, ressources center, location of the event
+## OLS - Regression
 
-# OLS - Regression
+### Split data
+
+```{r}
+dataset$Sample <- create.samples(data.fe, est = 0.70, val = 0.30, rand.seed = 1)
+trainingset<-dataset[dataset$Sample=="Estimation",]
+testset<-dataset[dataset$Sample=="Validation",]
+trainingset<-trainingset[,-32]
+testset<-testset[,-32]
+
+
+```
+
 
 Split data: train et test
 On predict sur le test du train. 
-Faire comparaison de mod?le. 
+Faire comparaison de modele 
 
 
 On garde x_test pour le final predict
