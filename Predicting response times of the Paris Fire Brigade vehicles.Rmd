@@ -152,6 +152,8 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 library(DataExplorer)
+library(hms)
+library(imputeTS)
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -1062,36 +1064,33 @@ data.fe.sample %>%
 
 Interpretation a rajouter
 
-#### 4.2 Order of the brigade
 
-
-O,1 : si plusieurs brigades affectes ou 
-order of the brigade to leave. 
-
-For the same event, multiple brigade can leave. 
-It is worth to take into account that it might be a corr between the order of the brigate to leave and the time for preparation. 
+### 4.2 Add month, day of week, morning, day,  night
 
 ```{r}
+data.fe$month <-month(as.Date(as.character(data.fe$date.key.sÃ.lection), "%Y%m%d"))
+
+data.fe$weekdays <-weekdays(as.Date(as.character(data.fe$date.key.sÃ.lection), "%Y%m%d"))
 ```
 
-### 4.3 Add month, day of week, morning, day,  night
+
+
 
 ```{r}
-data.fe$month <- month(as.Date(as.character(data.fe$date.key.sÃ©lection), "%Y%m%d"))
-data.fe$weekdays <- weekdays(as.Date(as.character(data.fe$date.key.sÃ©lection), "%Y%m%d"))
-install.packages("hms")
-library(hms)
+data.fe$hours <-as.hms(formatC(as.integer(data.fe$time.key.sÃ.lection), big.mark = ":", big.interval = 2L))
 
-data.fe$hours <- as.hms(formatC(as.integer(data.fe$time.key.sÃ©lection), big.mark = ":", big.interval = 2L))
-install.packages("imputeTS")
-data.fe$hours <- replace(data.quali$hours, is.na(data.quali$hours), "00:00:00")
-data.fe$hours <- substr(data.quali$hours, 1, 2)
-
+data.fe$hours <- replace(data.fe$hours, is.na(data.fe$hours), "00:00:00")
 ```
 
 ```{r}
-table(data.quali$month)
-prop.table(table(data.quali$month))
+data.fe$hours <- substr(data.fe$hours, 1, 2)
+
+```
+
+
+```{r}
+table(data.fe$month)
+prop.table(table(data.fe$month))
 ```
 
 ```{r}
@@ -1118,12 +1117,72 @@ barplot(table(data.fe$hours),horiz = F,cex.names=0.8,col="blue",main="Hours",yla
 ```
 
 
-add time and date as factor var
-+ visualisation
+We can now remove date.key.selection and time.key.selection
+
+```{r}
+data.fe<-data.fe[,-c(13,14)]
+
+```
+Convert time and date build variables into factors
+
+```{r}
+data.fe$hours <- as.factor(data.fe$hours)
+data.fe$weekdays <- as.factor(data.fe$weekdays)
+data.fe$month <- as.factor(data.fe$month)
+
+```
+
+
+#### 4.3 Order of the brigade
+
+
+For the same event, multiple brigade can leave. 
+It is worth to take into account that it might be a corr between the order of the brigate to leave and the time for preparation. 
+Once we have classify those brigate, we will be able to remove the id of the intervention. 
+
+
+```{r}
+data.fe$intervention %>% as.factor() %>% str
+data.fe$emergency.vehicle.selection %>% str
+
+204987-196480
+```
+Plot frequency order of id intervention.
+
+
+```{r}
+a<-data.fe %>%
+        group_by(intervention)%>%
+         tally()
+```
+
+```{r}
+a %>% setDT
+a %>% str
+```
+
+
+```{r}
+data.fe<-merge(a,data.fe, by.x = 'intervention', by.y = 'intervention', all=FALSE)
+```
+remove extra column
+```{r}
+```
+rename and convert as factor
+
+```{r}
+data.fe$n<-data.fe$n %>% as.factor
+```
 
 ### 4.4 : GPS data and Json ? [if time]
 
-Remove GPS data 
+No time so we decide to remove gps datas from our analysis. 
+
+
+```{r}
+data.fe<-
+```
+
 
 ```{r}
 data.fe %>% View
