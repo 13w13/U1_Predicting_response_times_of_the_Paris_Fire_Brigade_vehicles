@@ -262,6 +262,11 @@ data$emergency.vehicle<-as.factor(data$emergency.vehicle)
 
 ```
 
+```{r}
+data$intervention %>% as.factor %>% str
+```
+
+
 Apply same in x_test
 ```{r}
 x_test$alert.reason.category<- as.factor(x_test$alert.reason.category)
@@ -1068,8 +1073,11 @@ Interpretation a rajouter
 #### 4.2
 order of the brigade to leave. 
 
-```{r}
+For the same event, multiple brigade can leave. 
+It is worth to take into account that it might be a corr between the order of the brigate to leave and the time for preparation. 
 
+```{r}
+data.fe$intervention %>% 
 ```
 
 
