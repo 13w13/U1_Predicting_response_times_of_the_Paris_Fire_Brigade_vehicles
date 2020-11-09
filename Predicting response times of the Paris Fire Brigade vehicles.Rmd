@@ -149,7 +149,6 @@ library(magrittr)
 library(data.table)
 library(sandwich)
 library(dplyr)
-library(stringr)
 library(ggplot2)
 library(DataExplorer)
 library(hms)
@@ -158,7 +157,7 @@ library(leaflet)
 library(Hmisc)
 library(FactoMineR)
 library(BCA)
-
+library(MLmetrics)
 
 ```
 
@@ -943,8 +942,32 @@ data.quali<-data.clean[,c(3,4,5,6,7,10,11,12,15,17)]
 ```{r}
 table(data.quali$rescue.center)
 ```
+We remove some levels (for data.clean$rescue.center variable) which are not significant for us because there are very few samples for them. 
+Then, we use the drop level function to drop levels where there is no sample.
 ```{r}
+table(data.clean$rescue.center)
+levels(data.clean$rescue.center)
 
+
+
+data.clean$rescue.center <- subset(data.clean$rescue.center, data.clean$rescue.center != "266281")
+
+
+data.clean <- data.clean[data.clean$rescue.center != 266281,]
+
+data.clean <- data.clean[data.clean$rescue.center != 266294,]
+
+data.clean <- data.clean[data.clean$rescue.center != 266296,]
+
+data.clean <- data.clean[data.clean$rescue.center != 266321,]
+
+data.clean <- data.clean[data.clean$rescue.center != 266323,]
+
+data.clean <- data.clean[data.clean$rescue.center != 266324,]
+
+table(droplevels(data.clean$rescue.center))
+
+table(data.clean$rescue.center)
 ```
 
 
@@ -1105,8 +1128,6 @@ data.fe$weekdays <-weekdays(as.Date(as.character(data.fe$date.key.selection), "%
 ```
 
 
-
-
 ```{r}
 data.fe$hours <-as.hms(formatC(as.integer(data.fe$time.key.selection), big.mark = ":", big.interval = 2L))
 
@@ -1219,15 +1240,21 @@ data.fe<-data.fe[,-c(18,19)]
 update data.quanti and data.quali
 ```{r}
 colnames(data.fe)
+
 str(data.fe)
 
-data.quanti<-data.fe[,c(21,17,16,14,9,8,2)]
+data.quanti<-data.fe[,c(23,22,19,18,17,16,14,9,8,2)]
 
-data.quanti.y<-data.fe[,c(21,20,19,18,17,16,14,9,8,2)]
+data.quanti.y<-data.fe[,c(23,22,21,20,19,18,17,16,14,9,8,2)]
 
-data.quali<-data.fe[,-c(21,20,19,18,17,16,14,9,8,2)]
+data.quali<-data.fe[,-c(23,22,21,20,19,18,17,16,14,9,8,2)]
 
-data.quali.y<-data.fe[,-c(21,17,16,14,9,8,2)]
+data.quali.y<-data.fe[,-c(23,22,19,18,17,16,14,9,8,2)]
+
+str(data.quanti)
+str(data.quanti.y)
+str(data.quali)
+str(data.quali.y)
 
 ```
 
@@ -1408,8 +1435,21 @@ testset<-testset[,-23]
 ### 6.2 Yo : Selection - Departure
 
 Remove id variables
+
 ```{r}
 trainingset<-trainingset[,-c("emergency.vehicle.selection","emergency.vehicle")]
+
+trainingset<-trainingset[,-c("emergency.vehicle.selection")]
+
+
+```
+
+Remove other Y
+
+```{r}
+colnames(trainingset)
+
+trainingset<-trainingset[,-c("delta.departure.presentation","delta.selection.presentation")]
 ```
 
 
@@ -1426,56 +1466,139 @@ summary(lm)
 ```
 
 
-
-We can remove the rescue center because he has the higher pvalue
+We can remove the latitude variable because he has the higher pvalue
 ```{r}
-lm1 <- lm(delta.selection.presentation ~ 
-           alert.reason.category
+#Linear Regression,
+
+options(max.print = 10000)
+
+colnames(trainingset)
+
+lm1 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
          + intervention.on.public.roads
          + floor
          + location.of.the.event
          + longitude.intervention
-         + latitude.intervention
+         + emergency.vehicle
          + emergency.vehicle.type
-         + status.preceding.selection
+         + rescue.center
          + delta.status.preceding.selection.selection
          + departed.from.its.rescue.center
          + OSRM.estimated.distance
          + OSRM.estimated.duration
-           ,data = data.variables.without.cor)
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
 
 summary(lm1)
+
+
 ```
 
-We  remove the departed.from.its.rescue.center because he has the higher pvalue
+We can remove the floor variable because he has the higher pvalue
 ```{r}
-lm2 <- lm(delta.selection.presentation ~ 
-           alert.reason.category
+lm2 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
          + intervention.on.public.roads
-         + floor
          + location.of.the.event
          + longitude.intervention
-         + latitude.intervention
+         + emergency.vehicle
          + emergency.vehicle.type
-         + status.preceding.selection
+         + rescue.center
          + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
          + OSRM.estimated.distance
          + OSRM.estimated.duration
-           ,data = data.variables.without.cor)
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
 
 summary(lm2)
 ```
+We can remove the longitude intervention variable because he has the higher pvalue
+```{r}
+lm3 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + emergency.vehicle
+         + emergency.vehicle.type
+         + rescue.center
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
 
-Multicolinéarity 
+summary(lm3)
+```
+
+
+
+We can remove the emergency vehicle type because """its has the higher pvalue
+```{r}
+lm4 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + emergency.vehicle
+         + rescue.center
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
+
+summary(lm4)
+```
+We can remove the rescue center variable because he has the higher pvalue
+```{r}
+lm5 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + emergency.vehicle
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset, na.action = na.pass)
+
+summary(lm5)
+```
+#### 6.2.2 Y0 : Multicolinéarity 
 
 ```{r}
+library(sandwich)
 library(car)
 
-vif(lm2)
+vif(lm5)
 
 #cor(data.quanti.without.cor)
 
-lm3 <- lm(delta.selection.presentation ~ 
+lm6 <- lm(delta.selection.presentation ~ 
            alert.reason.category
          + intervention.on.public.roads
          + floor
@@ -1488,28 +1611,28 @@ lm3 <- lm(delta.selection.presentation ~
          + OSRM.estimated.distance
            ,data = data.variables.without.cor)
 
-summary(lm3)
+summary(lm6)
 
-vif(lm3)
+vif(lm6)
 #variables qualitatives 
 
 ```
-Residuals analysis
+#### 6.2.3 Residuals analysis
 
 Study the residuals of the selected model
 What we've done is not enough to validate the model. We need to study the residuals
 if hypothesis are not validated (see course.), the test of the coefficient are false 
 Study the residuals of the selected model
 
-Is residuals means 0?
+##### 6.2.3.1 Is residuals means 0?
 
 ```{r}
 #mean of residuals
-summary(lm3$residuals) 
+summary(lm5$residuals) 
 ```
 Yes it is !
 
-#### Are residuals normally distributed?
+##### 6.2.3.2 Are residuals normally distributed?
 
 Normality test : shapiro test
 H0 : Normality and H1 : no normality
@@ -1521,7 +1644,9 @@ shapiro.test(lm3$residuals)
 
 library(tseries)
 
-jarque.bera.test(lm3$residuals)
+jarque.bera.test(lm4$residuals)
+
+jarque.bera.test(lm5$residuals)
 
 #install.packages("nortest")
 library(nortest)
@@ -1529,33 +1654,52 @@ ad.test(lm3$residuals)
 
 
 ```
-
-
-
 No normality because p-value is << 5%. Here, residuals are not normally distributed. 
 NB : non normality could appear because of outliers. This is not the case here. 
 
+```{r}
 
+qqnorm(lm2$residuals)
+qqline(lm2$residuals)
+
+```
 
 ```{r}
 
 qqnorm(lm3$residuals)
 qqline(lm3$residuals)
+
 ```
 
-#### Are residuals homoskedastic?
+```{r}
+
+qqnorm(lm4$residuals)
+qqline(lm4$residuals)
+
+```
+
+```{r}
+qqnorm(lm5$residuals)
+qqline(lm5$residuals)
+```
+```{r}
+qqnorm(log(lm5$residuals))
+qqline(log(lm5$residuals))
+```
+
+##### 6.2.3.3 Are residuals homoskedastic?
 
 1. First model which is not considering heteroskedasticity
 
 ```{r}
 
-plot(lm3$residuals~lm3$fitted)
+plot(lm5$residuals~lm5$fitted)
 
 library(lmtest)
 
 # Breush Pagan test H0 : homoskedasticity against H1 : heteroskedasticity 
 
-bptest(lm3)
+bptest(lm5)
 
 ```
 pvalue << 5%, we reject H0
@@ -1572,7 +1716,45 @@ library(sandwich)
 
 #Calculate the robust covariance matrix
 
-vcov2 <- vcovHC(lm3, type = "HC1")
+vcov2 <- vcovHC(lm5, type = "HC1")
+
+coeftest(lm5, vcov. = vcov2)
+
+#The estimated value of the coefficients remains
+#the same but the value of the t-test changes.
+#A coefficient could be significant in the first
+#model and no more in the second
+```
+
+##### 6.2.3.4 Are the residuals correlated ?
+
+There are several tests for autocorrelation
+Durbin-Watson test is one of the most often used
+
+H0 : Residuals are non autocorrelated
+H1 : Residuals are autocorrelated
+
+1. First model which is not considering heteroskedasticity
+
+```{r}
+
+library(car)
+
+# Durbin Watson test where H0 : residuals are not autocorrelated against H1 : residuals are aucorrelated
+durbinWatsonTest (lm3,max.lag=1)
+
+# doesn't work....
+```
+
+2. Second model taking into account heteroskedasticity
+
+```{r}
+
+library(sandwich)
+
+#Calculate the robust covariance matrix
+
+vcov4 <- NeweyWest(lm3)
 
 coeftest(lm3, vcov. = vcov2)
 
@@ -1582,7 +1764,339 @@ coeftest(lm3, vcov. = vcov2)
 #model and no more in the second
 ```
 
-#### Are the residuals correlated ?
+#### 6.2.4 Y0 : Prediction
+
+
+```{r}
+
+colnames(data.quali)
+
+lm5$xlevels$alert.reason.category <- union(lm5$xlevels$alert.reason.category, levels(testset$alert.reason.category))
+lm5$xlevels$intervention.on.public.roads <- union(lm5$xlevels$intervention.on.public.roads, levels(testset$intervention.on.public.roads))
+lm5$xlevels$location.of.the.event <- union(lm5$xlevels$location.of.the.event, levels(testset$location.of.the.event))
+lm5$xlevels$emergency.vehicle <- union(lm5$xlevels$emergency.vehicle, levels(testset$emergency.vehicle))
+lm5$xlevels$departed.from.its.rescue.center <- union(lm5$xlevels$departed.from.its.rescue.center, levels(testset$departed.from.its.rescue.center))
+lm5$xlevels$month <- union(lm5$xlevels$month, levels(testset$month))
+lm5$xlevels$weekdays <- union(lm5$xlevels$weekdays, levels(testset$weekdays))
+lm5$xlevels$hours <- union(lm5$xlevels$hours, levels(testset$hours))
+
+
+
+```
+
+
+```{r}
+pred_reg_y0 <- lm5 %>% predict(newdata = testset)
+
+R2 = R2_Score(pred_reg_y0, testset$delta.selection.departure)
+R2
+
+head(ConfusionMatrix(pred_reg_y0, testset$delta.selection.departure))
+
+
+
+# Model performance
+data.frame(
+  RMSE = RMSE(pred_reg_y0, testset$delta.selection.departure),
+  R2 = R2_Score(pred_reg_y0, testset$delta.selection.departure)
+)
+```
+
+### 6.3 Y1 
+
+Remove id variables
+
+```{r}
+trainingset<-trainingset[,-c("emergency.vehicle.selection","emergency.vehicle")]
+
+trainingset<-trainingset[,-c("emergency.vehicle.selection")]
+
+
+```
+
+Remove other Y
+
+```{r}
+colnames(trainingset)
+
+trainingset<-trainingset[,-c("delta.departure.presentation","delta.selection.presentation")]
+```
+
+
+```{r}
+#Linear Regression,
+
+options(max.print = 10000)
+
+lm <- lm(delta.selection.departure ~.,data = trainingset)
+
+summary(lm)
+
+
+```
+
+
+We can remove the latitude variable because he has the higher pvalue
+```{r}
+#Linear Regression,
+
+options(max.print = 10000)
+
+colnames(trainingset)
+
+lm1 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + floor
+         + location.of.the.event
+         + longitude.intervention
+         + emergency.vehicle
+         + emergency.vehicle.type
+         + rescue.center
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
+
+summary(lm1)
+
+
+```
+
+We can remove the floor variable because he has the higher pvalue
+```{r}
+lm2 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + longitude.intervention
+         + emergency.vehicle
+         + emergency.vehicle.type
+         + rescue.center
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
+
+summary(lm2)
+```
+We can remove the longitude intervention variable because he has the higher pvalue
+```{r}
+lm3 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + emergency.vehicle
+         + emergency.vehicle.type
+         + rescue.center
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
+
+summary(lm3)
+```
+
+We can remove the emergency vehicle type because """its has the higher pvalue
+```{r}
+lm4 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + emergency.vehicle
+         + rescue.center
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
+
+summary(lm4)
+```
+We can remove the rescue center variable because he has the higher pvalue
+```{r}
+lm5 <- lm(delta.selection.departure ~ 
+           n 
+         + alert.reason.category
+         + intervention.on.public.roads
+         + location.of.the.event
+         + emergency.vehicle
+         + delta.status.preceding.selection.selection
+         + departed.from.its.rescue.center
+         + OSRM.estimated.distance
+         + OSRM.estimated.duration
+         + OSRM.estimated.speed
+         + month
+         + weekdays
+         + hours
+           ,data = trainingset)
+
+summary(lm5)
+```
+
+#### 6.3.2 Y1 : Multicolinéarity 
+
+```{r}
+library(sandwich)
+library(car)
+
+vif(lm5)
+
+#cor(data.quanti.without.cor)
+
+lm6 <- lm(delta.selection.presentation ~ 
+           alert.reason.category
+         + intervention.on.public.roads
+         + floor
+         + location.of.the.event
+         + longitude.intervention
+         + latitude.intervention
+         + emergency.vehicle.type
+         + status.preceding.selection
+         + delta.status.preceding.selection.selection
+         + OSRM.estimated.distance
+           ,data = data.variables.without.cor)
+
+summary(lm6)
+
+vif(lm6)
+#variables qualitatives 
+
+```
+
+#### 6.3.3 Y1 : Residuals analysis
+
+Study the residuals of the selected model
+What we've done is not enough to validate the model. We need to study the residuals
+if hypothesis are not validated (see course.), the test of the coefficient are false 
+Study the residuals of the selected model
+
+##### 6.3.3.1 Is residuals means 0?
+
+```{r}
+#mean of residuals
+summary(lm5$residuals) 
+```
+Yes it is !
+
+##### 6.3.3.2 Are residuals normally distributed?
+
+Normality test : shapiro test
+H0 : Normality and H1 : no normality
+```{r}
+
+shapiro.test(lm3$residuals)
+
+#Error in shapiro.test(regmult3$residuals) : la taille de l'échantillon doit être comprise entre 3 et 5000
+
+library(tseries)
+
+jarque.bera.test(lm4$residuals)
+
+jarque.bera.test(lm5$residuals)
+
+#install.packages("nortest")
+library(nortest)
+ad.test(lm3$residuals)
+
+
+```
+No normality because p-value is << 5%. Here, residuals are not normally distributed. 
+NB : non normality could appear because of outliers. This is not the case here. 
+
+```{r}
+
+qqnorm(lm2$residuals)
+qqline(lm2$residuals)
+
+```
+
+```{r}
+
+qqnorm(lm3$residuals)
+qqline(lm3$residuals)
+
+```
+
+```{r}
+
+qqnorm(lm4$residuals)
+qqline(lm4$residuals)
+
+```
+
+```{r}
+qqnorm(lm5$residuals)
+qqline(lm5$residuals)
+```
+```{r}
+qqnorm(log(lm5$residuals))
+qqline(log(lm5$residuals))
+```
+
+##### 6.3.3.3 Are residuals homoskedastic?
+
+1. First model which is not considering heteroskedasticity
+
+```{r}
+
+plot(lm5$residuals~lm5$fitted)
+
+library(lmtest)
+
+# Breush Pagan test H0 : homoskedasticity against H1 : heteroskedasticity 
+
+bptest(lm5)
+
+```
+pvalue << 5%, we reject H0
+residuals are heteroskedastic
+
+In case of heteroskedasticity, we have to use a robust standard error estimator. Otherwise, all our t-tests will be wrong.
+
+
+2. Second model taking into account heteroskedasticity
+
+```{r}
+
+library(sandwich)
+
+#Calculate the robust covariance matrix
+
+vcov2 <- vcovHC(lm5, type = "HC1")
+
+coeftest(lm5, vcov. = vcov2)
+
+#The estimated value of the coefficients remains
+#the same but the value of the t-test changes.
+#A coefficient could be significant in the first
+#model and no more in the second
+```
+
+##### 6.3.3.4 Are the residuals correlated ?
 
 There are several tests for autocorrelation
 Durbin-Watson test is one of the most often used
@@ -1621,16 +2135,18 @@ coeftest(lm3, vcov. = vcov2)
 ```
 
 
-Just for test 
 ```{r}
-lm.selection.departure <- lm(data.clean$delta.selection.departure~., data=data.clean[,-12])
-
-summary(lm.selection.departure)
-
-lm1.selection.departure<-(data.clean$delta.selection.departure ~data.clean$delta.status.preceding.selection.selection+factor(data.clean$intervention.on.public.roads), data=data.clean)
-summary(lm1.selection.departure)
-
+pred_reg_y0 <- lm5 %>% predict(testset)
+# Model performance
+data.frame(
+  RMSE = RMSE(pred_reg_y0, testset$delta.selection.departure),
+  R2 = R2(pred_reg_y0, testset$delta.selection.departure)
+)
 ```
+
+
+
+
 
 
 ```{r}
