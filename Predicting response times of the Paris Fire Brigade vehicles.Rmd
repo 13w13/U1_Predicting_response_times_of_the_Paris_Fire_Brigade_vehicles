@@ -174,6 +174,12 @@ c<- colnames(data)
 c[14] <- "date.key.selection"
 c[15] <- "time.key.selection"
 colnames(data) <- c
+
+#Same for x_test
+c<- colnames(x_test)
+c[14] <- "date.key.selection"
+c[15] <- "time.key.selection"
+colnames(x_test) <- c
 ```
 
 
@@ -246,7 +252,6 @@ Good proporition (around 5% of dataset), acceptable to omit those values.
 data <- na.omit(data)
 
 which(is.na(data))
-x_test<-na.omit(x_test)
 ```
 
 (We apply same cleaning in x_train and y_train in case)
@@ -305,6 +310,7 @@ For EDA part, we could convert them into date and time format
 
 ```{r}
 data<-data[,-c("selection.time")]
+x_test<-x_test[,-c("selection.time")]
 ```
 
 Store quali, quali and quali with Ys variables 
@@ -379,7 +385,7 @@ data %>%
 
 We find:
 
-    same smooth distribution that looks almost log-normal with a peak around 400, 500 seconds, i.e. about 6 minutes.
+- same smooth distribution that looks almost log-normal with a peak around 400, 500 seconds, i.e. about 6 minutes.
 
 From previous observation. 
 
@@ -505,6 +511,7 @@ data<- data[data$delta.selection.departure < 1200,]
 data<-data[data$delta.departure.presentation < 1200,]
 data<-data[data$delta.selection.presentation < 1200,]
 ```
+
 
 
 
@@ -930,6 +937,15 @@ barplot(table(data.clean$floor),horiz = F,cex.names=0.8,col="blue",main="Floors"
 data.quali<-data.clean[,c(3,4,5,6,7,10,11,12,15,17)]
 ```
 
+Apply same for x_test
+```{r}
+
+levels(x_test$floor)<-list("-2"=c("-10","-9","-6","-5","-4","-3", "-2"),"-1"=c("-1"),"0"=c("0"),"1"=c("1"),"2"=c("2"),"3"=c("3"),"4"=c("4"),"5"=c("5"),"6"=c("6"),"7"=c("7"),"8"=c("8"),"9"=c("9"),"10"=c("10"),"11"=c("11"),"12"=c("12"),"13"=c("13"),"14"=c("14"),"15"=c("15"),"16"=c("16"),"17"=c("17","18","19","20","21","22","23","24","25","26","27","28","29", "30", "31", "32", "33", "37","52","79","100"))
+
+
+```
+
+
 #### Clean outliers for rescue.center
 
 266 281
@@ -970,6 +986,25 @@ table(droplevels(data.clean$rescue.center))
 table(data.clean$rescue.center)
 ```
 
+Apply same for x_test
+```{r}
+x_test$rescue.center <- subset(x_test$rescue.center, x_test$rescue.center != "266281")
+
+x_test <- x_test[x_test$rescue.center != 266281,]
+
+x_test <- x_test[x_test$rescue.center != 266294,]
+
+x_test <- x_test[x_test$rescue.center != 266296,]
+
+x_test <- x_test[x_test$rescue.center != 266321,]
+
+x_test <- x_test[x_test$rescue.center != 266323,]
+
+x_test <- x_test[x_test$rescue.center != 266324,]
+
+table(droplevels(x_test$rescue.center))
+
+```
 
 ### 3.2. What is time difference between departure.presentation and OSRM estimated duration ? 
 
@@ -1087,6 +1122,11 @@ data.fe$OSRM.estimated.speed<-(data.clean$OSRM.estimated.distance/1000)/(data.cl
 data.fe$OSRM.estimated.speed %>% summary()
 hist(data.fe$OSRM.estimated.speed , col="blue",main="Estimated Speed km/h")
 ```
+Same x_test
+```{r}
+x_test$OSRM.estimated.speed<-(x_test$OSRM.estimated.distance/1000)/(x_test$OSRM.estimated.duration/60^2)
+```
+
 
 #### 4.1.2 How top influencer predictors and estimated speed correlate ? 
 
@@ -1116,8 +1156,6 @@ data.fe.sample %>%
 ```
 
 
-Interpretation a rajouter
-
 
 ### 4.2 Add month, day of week
 
@@ -1125,6 +1163,12 @@ Interpretation a rajouter
 data.fe$month <-month(as.Date(as.character(data.fe$date.key.selection), "%Y%m%d"))
 
 data.fe$weekdays <-weekdays(as.Date(as.character(data.fe$date.key.selection), "%Y%m%d"))
+```
+Same x_test
+```{r}
+x_test$month <-month(as.Date(as.character(x_test$date.key.selection), "%Y%m%d"))
+
+x_test$weekdays <-weekdays(as.Date(as.character(x_test$date.key.selection), "%Y%m%d"))
 ```
 
 
@@ -1134,8 +1178,16 @@ data.fe$hours <-as.hms(formatC(as.integer(data.fe$time.key.selection), big.mark 
 data.fe$hours <- replace(data.fe$hours, is.na(data.fe$hours), "00:00:00")
 ```
 
+Same x_test
+```{r}
+x_test$hours <-as.hms(formatC(as.integer(x_test$time.key.selection), big.mark = ":", big.interval = 2L))
+
+x_test$hours <- replace(x_test$hours, is.na(x_test$hours), "00:00:00")
+```
+
 ```{r}
 data.fe$hours <- substr(data.fe$hours, 1, 2)
+x_test$hours <- substr(x_test$hours, 1, 2)
 
 ```
 
@@ -1169,12 +1221,19 @@ barplot(table(data.fe$hours),horiz = F,cex.names=0.8,col="blue",main="Hours",yla
 ```
 
 
+
 We can now remove date.key.selection and time.key.selection
 
 ```{r}
 data.fe<-data.fe[,-c(13,14)]
 
 ```
+Same x_test
+
+```{r}
+x_test<-x_test[,-c(13,14)]
+```
+
 Convert time and date build variables into factors
 
 ```{r}
@@ -1184,6 +1243,12 @@ data.fe$month <- as.factor(data.fe$month)
 
 ```
 
+```{r}
+x_test$hours <- as.factor(x_test$hours)
+x_test$weekdays <- as.factor(x_test$weekdays)
+x_test$month <- as.factor(x_test$month)
+
+```
 
 ### 4.3 Order of the brigade
 
@@ -1199,6 +1264,13 @@ data.fe$emergency.vehicle.selection %>% str
 
 204987-196480
 ```
+
+
+```{r}
+x_test$intervention %>% as.factor() %>% str
+```
+
+
 Plot frequency order of id intervention.
 
 
@@ -1209,23 +1281,40 @@ a<-data.fe %>%
 ```
 
 ```{r}
+b<-x_test %>%
+        group_by(intervention)%>%
+         tally()
+```
+
+```{r}
 a %>% setDT
 a %>% str
+```
+
+```{r}
+b %>% setDT
 ```
 
 
 ```{r}
 data.fe<-merge(a,data.fe, by.x = 'intervention', by.y = 'intervention', all=FALSE)
 ```
+
+```{r}
+x_test<-merge(b,x_test, by.x = 'intervention', by.y = 'intervention', all=FALSE)
+```
+
 rename and convert as factor
 
 ```{r}
 data.fe$n<-data.fe$n %>% as.factor
+x_test$n<-x_test$n %>% as.factor
 ```
 Now that we have intervention frequency as factor, we can remove intervention ID
 
 ```{r}
 data.fe<-data.fe[,-c(1)]
+x_test<-x_test[,-c(1)]
 ```
 
 
@@ -1234,6 +1323,7 @@ data.fe<-data.fe[,-c(1)]
 We decide to remove GPS data since we have the same data. 
 ```{r}
 data.fe<-data.fe[,-c(18,19)]
+x_test<-x_test[,-c(18,19)]
 ```
 
 ## 5. Correlation analysis
@@ -1329,6 +1419,11 @@ We find :
 ```{r}
 data.fe<-data.fe[,-c("alert.reason","status.preceding.selection","longitude.before.departure","latitude.before.departure")]
 ```
+
+```{r}
+x_test<-x_test[,-c("alert.reason","status.preceding.selection","longitude.before.departure","latitude.before.departure")]
+```
+
 
 ##### PCA
 
@@ -1458,7 +1553,7 @@ xgb_params <- list(colsample_bytree = 0.7, #variables per tree
 train our model
 ```{r}
 set.seed(4321)
-gb_dt <- xgb.train(params = xgb_params,
+gb_0_dt <- xgb.train(params = xgb_params,
                    data = dtrain,
                    print_every_n = 100,
                    nrounds = 1000)
@@ -1466,7 +1561,7 @@ gb_dt <- xgb.train(params = xgb_params,
 Plot the 30 first important features in our model
 
 ```{r}
-importance_matrix <- xgb.importance(model = gb_dt)
+importance_matrix <- xgb.importance(model = gb_0_dt)
 xgb.plot.importance(importance_matrix[1:30,])
 ```
 We find : 
@@ -1496,7 +1591,7 @@ dtest <- xgb.DMatrix(sparse_matrix2,label=testset0$delta.selection.departure)
 Predict
 
 ```{r}
-pred_xgboost_y0 <- predict(gb_dt,dtest)
+pred_xgboost_y0 <- predict(gb_0_dt,dtest)
 ```
 
 ```{r}
@@ -1546,7 +1641,7 @@ xgb_params <- list(colsample_bytree = 0.5, #variables per tree
 train our model
 ```{r}
 set.seed(4321)
-gb_dt <- xgb.train(params = xgb_params,
+gb_1_dt <- xgb.train(params = xgb_params,
                    data = dtrain,
                    print_every_n = 100,
                    nrounds = 1000)
@@ -1554,7 +1649,7 @@ gb_dt <- xgb.train(params = xgb_params,
 Plot the 30 first important features in our model
 
 ```{r}
-importance_matrix <- xgb.importance(model = gb_dt)
+importance_matrix <- xgb.importance(model = gb_1_dt)
 xgb.plot.importance(importance_matrix[1:30,])
 ```
 We find : 
@@ -1580,7 +1675,7 @@ dtest <- xgb.DMatrix(sparse_matrix2,label=testset1$delta.departure.presentation)
 Predict
 
 ```{r}
-pred_xgboost_y1 <- predict(gb_dt,dtest)
+pred_xgboost_y1 <- predict(gb_1_dt,dtest)
 ```
 
 ```{r}
@@ -1597,7 +1692,9 @@ postResample(pred = pred_xgboost_y1, obs = testset1$delta.departure.presentation
 
 ```{r}
 pred_xgboost_ys=pred_xgboost_y0+pred_xgboost_y1
-pred_xgboost_ys %>% head
+pred_xgboost=data.frame(pred_xgboost_y0,pred_xgboost_y1,pred_xgboost_ys)
+
+pred_xgboost %>% head
 testset$delta.selection.presentation %>% head
 ```
 
@@ -1609,9 +1706,53 @@ No too bad accuracy
 
 ### 6.5 Use feature imporatnce to create group for factor variables for futur reg
 
-### 6.6 
-Actual predict
-Redo cleaning applied below 
+### 6.6 Actual predict
+
+
+
+
+Y0
+Predict
+```{r}
+sparse_matrix3 <- sparse.model.matrix( ~ ., data =x_test )[,-1]
+```
+
+Store into xgb Matrix
+
+
+```{r}
+dtest <- xgb.DMatrix(sparse_matrix3)
+```
+
+
+```{r}
+pred_xgboost_y0_final <- predict(gb_0_dt,dtest)
+```
+
+```{r}
+pred_xgboost_y0_final %>% head
+```
+
+Y1
+Predict
+```{r}
+pred_xgboost_y1_final <- predict(gb_1_dt,dtest)
+```
+
+```{r}
+pred_xgboost_y1_final %>% head
+
+```
+
+Ys
+```{r}
+pred_xgboost_final_ys=pred_xgboost_y0_final+pred_xgboost_y1_final
+pred_final_xgboost=data.frame(pred_xgboost_y0_final,pred_xgboost_y1_final,pred_xgboost_final_ys)
+
+dim(x_test)
+
+write.csv(pred_final_xgboost,"C:/Users/swp/Documents/_Perso/Cours/M2/U1. Analytical Theory, Methods and Models/Econometrics and Statitical Models/0.Project/1stsubmit.csv", row.names = FALSE)
+```
 
 
 
