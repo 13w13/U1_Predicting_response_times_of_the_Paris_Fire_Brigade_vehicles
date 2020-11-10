@@ -157,7 +157,6 @@ library(leaflet)
 library(Hmisc)
 library(FactoMineR)
 library(BCA)
-library(MLmetrics)
 
 ```
 
@@ -986,25 +985,7 @@ table(droplevels(data.clean$rescue.center))
 table(data.clean$rescue.center)
 ```
 
-Apply same for x_test
-```{r}
-x_test$rescue.center <- subset(x_test$rescue.center, x_test$rescue.center != "266281")
 
-x_test <- x_test[x_test$rescue.center != 266281,]
-
-x_test <- x_test[x_test$rescue.center != 266294,]
-
-x_test <- x_test[x_test$rescue.center != 266296,]
-
-x_test <- x_test[x_test$rescue.center != 266321,]
-
-x_test <- x_test[x_test$rescue.center != 266323,]
-
-x_test <- x_test[x_test$rescue.center != 266324,]
-
-table(droplevels(x_test$rescue.center))
-
-```
 
 ### 3.2. What is time difference between departure.presentation and OSRM estimated duration ? 
 
@@ -1522,20 +1503,20 @@ testset <- dataset[-train_indices, ]
 Store only y0 target value
 ```{r}
 trainset0_y0<-trainset$delta.selection.departure
-trainset0<-trainset[,-c("delta.departure.presentation","delta.selection.presentation")]
+trainset0<-trainset[,-c("delta.departure.presentation","delta.selection.presentation","delta.selection.departure")]
 testset0_y0<-testset$delta.selection.departure
-testset0<-testset[,-c("delta.departure.presentation","delta.selection.presentation")]
+testset0<-testset[,-c("delta.departure.presentation","delta.selection.presentation","delta.selection.departure")]
 ```
 
 
 Create one-hot matrix for cat variable. with sparse-matrix
 ```{r}
-sparse_matrix <- sparse.model.matrix(delta.selection.departure ~ ., data = trainset0)[,-1]
+sparse_matrix <- sparse.model.matrix( ~ ., data = trainset0)[,-1]
 ```
 
 Store into xgb Matrix
 ```{r}
-dtrain <- xgb.DMatrix(sparse_matrix,label = trainset0$delta.selection.departure)
+dtrain <- xgb.DMatrix(sparse_matrix,label = trainset$delta.selection.departure)
 ```
 Set parameters for our xgb tree
 ```{r}
@@ -1578,14 +1559,14 @@ We find :
 
 Predict
 ```{r}
-sparse_matrix2 <- sparse.model.matrix(delta.selection.departure ~ ., data =testset0 )[,-1]
+sparse_matrix2 <- sparse.model.matrix( ~ ., data =testset0 )[,-1]
 ```
 
 Store into xgb Matrix
 
 
 ```{r}
-dtest <- xgb.DMatrix(sparse_matrix2,label=testset0$delta.selection.departure)
+dtest <- xgb.DMatrix(sparse_matrix2,label=testset$delta.selection.departure)
 ```
 
 Predict
@@ -1596,11 +1577,11 @@ pred_xgboost_y0 <- predict(gb_0_dt,dtest)
 
 ```{r}
 pred_xgboost_y0 %>% head
-testset0$delta.selection.departure %>% head
+testset$delta.selection.departure %>% head
 ```
 Compute MSE
 ```{r}
-postResample(pred = pred_xgboost_y0, obs = testset0$delta.selection.departure)
+postResample(pred = pred_xgboost_y0, obs = testset$delta.selection.departure)
 
 ```
 
@@ -1611,19 +1592,19 @@ postResample(pred = pred_xgboost_y0, obs = testset0$delta.selection.departure)
 Store only y0 target value
 ```{r}
 trainset1_y1<-trainset$delta.departure.presentation
-trainset1<-trainset[,-c("delta.selection.departure","delta.selection.presentation")]
+trainset1<-trainset[,-c("delta.selection.departure","delta.selection.presentation","delta.departure.presentation")]
 testset1_y1<-testset$delta.departure.presentation
-testset1<-testset[,-c("delta.selection.departure","delta.selection.presentation")]
+testset1<-testset[,-c("delta.selection.departure","delta.selection.presentation","delta.departure.presentation")]
 ```
 
 Create one-hot matrix for cat variable. with sparse-matrix
 ```{r}
-sparse_matrix <- sparse.model.matrix(delta.departure.presentation ~ ., data = trainset1)[,-1]
+sparse_matrix <- sparse.model.matrix( ~ ., data = trainset1)[,-1]
 ```
 
 Store into xgb Matrix
 ```{r}
-dtrain <- xgb.DMatrix(sparse_matrix,label = trainset1$delta.departure.presentation)
+dtrain <- xgb.DMatrix(sparse_matrix,label = trainset$delta.departure.presentation)
 ```
 Set parameters for our xgb tree
 ```{r}
@@ -1662,14 +1643,14 @@ We find :
 
 Predict
 ```{r}
-sparse_matrix2 <- sparse.model.matrix(delta.departure.presentation ~ ., data =testset1 )[,-1]
+sparse_matrix2 <- sparse.model.matrix( ~ ., data =testset1 )[,-1]
 ```
 
 Store into xgb Matrix
 
 
 ```{r}
-dtest <- xgb.DMatrix(sparse_matrix2,label=testset1$delta.departure.presentation)
+dtest <- xgb.DMatrix(sparse_matrix2,label=testset$delta.departure.presentation)
 ```
 
 Predict
@@ -1680,10 +1661,10 @@ pred_xgboost_y1 <- predict(gb_1_dt,dtest)
 
 ```{r}
 pred_xgboost_y1 %>% head
-testset1$delta.departure.presentation %>% head
+testset$delta.departure.presentation %>% head
 ```
 ```{r}
-postResample(pred = pred_xgboost_y1, obs = testset1$delta.departure.presentation)
+postResample(pred = pred_xgboost_y1, obs = testset$delta.departure.presentation)
 ```
 
 
@@ -1708,20 +1689,44 @@ No too bad accuracy
 
 ### 6.6 Actual predict
 
+```{r}
+namevector <- c("delta.selection.departure")
+x_test[ , namevector] <- N.A
 
+
+x_test[,"delta.selection.departure"] <- 0
+x_test$delta.selection.departure<- "1"
+```
+
+```{r}
+gdxg<-x_test[,-c("delta.selection.departure")]
+```
 
 
 Y0
 Predict
 ```{r}
-sparse_matrix3 <- sparse.model.matrix( ~ ., data =x_test )[,-1]
+sparse_matrix3 <- sparse.model.matrix( ~ ., data =gdxg)[,-1]
 ```
 
 Store into xgb Matrix
 
 
 ```{r}
-dtest <- xgb.DMatrix(sparse_matrix3)
+dtest <- xgb.DMatrix(sparse_matrix3,label=x_test$delta.selection.departure)
+```
+
+
+Predict
+```{r}
+sparse_matrix2 <- sparse.model.matrix( ~ ., data =testset0 )[,-1]
+```
+
+Store into xgb Matrix
+
+
+```{r}
+dtest <- xgb.DMatrix(sparse_matrix2,label=testset$delta.selection.departure)
 ```
 
 
