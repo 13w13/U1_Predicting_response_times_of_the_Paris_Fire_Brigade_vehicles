@@ -1533,11 +1533,11 @@ xgb_params <- list(colsample_bytree = 0.7, #variables per tree
 
 train our model
 ```{r}
-set.seed(4321)
+#set.seed(4321)
 gb_0_dt <- xgb.train(params = xgb_params,
                    data = dtrain1,
                    print_every_n = 100,
-                   nrounds = 10)
+                   nrounds = 100)
 ```
 Plot the 30 first important features in our model
 
@@ -1621,11 +1621,11 @@ xgb_params <- list(colsample_bytree = 0.5, #variables per tree
 
 train our model
 ```{r}
-set.seed(4321)
+#set.seed(4321)
 gb_1_dt <- xgb.train(params = xgb_params,
                    data = dtrain2,
                    print_every_n = 100,
-                   nrounds = 10)
+                   nrounds = 100)
 ```
 Plot the 30 first important features in our model
 
@@ -1688,14 +1688,150 @@ No too bad accuracy
 ### 6.5 Use feature imporatnce to create group for factor variables for futur regression
 
 ```{r}
+importance_matrix_y0 <- xgb.importance(model = gb_0_dt)
+xgb.plot.importance(importance_matrix_y0[1:30,])
+importance_matrix_y0[1:30,]
+```
+We find : 
+- delta statut preceding selection
+- Hours
+- Lat intervention
+- Long internvetion
+- emergency vehicule type VSAV$VD (group is or not)
+- emergency.vehicle.typePSE
+- emergency.vehicle.typeVID
+- emergency.vehicle.typeCRF
+- emergency.vehicle.typeFNPC
+- ORSRM data
+- Rescue center 2474,2477,2475,2439, 2435,2464, 2488, 2493(group is or not)
+- Alert-reason-cat-03 -2
+-departed from its rescue center1
 
+We regroup th types of emergency vehicle, the rescue centers and thealert reason category
+```{r}
+trainset0.regroup <- trainset0
+testset0.regroup <- testset0
+
+trainset0.regroup = trainset0.regroup %>%
+    mutate(emergency.vehicle.type.regroup = case_when(emergency.vehicle.type == "VSAV BSPP" ~  1,
+                                  emergency.vehicle.type =="PSE" ~  1,
+                                  emergency.vehicle.type == "VID" ~  1,
+                                  emergency.vehicle.type == "CRF" ~  1,
+                                  emergency.vehicle.type == "FNPC" ~  1,
+                                  TRUE ~ 0))
+trainset0.regroup = trainset0.regroup %>%
+    mutate(rescue.center.regroup = case_when(rescue.center == "2474" ~  1,
+                                  rescue.center =="2477" ~  1,
+                                  rescue.center == "2475" ~  1,
+                                  rescue.center == "2439" ~  1,
+                                  rescue.center == "2435" ~  1,
+                                  rescue.center == "2464" ~  1,
+                                  rescue.center == "2488" ~  1,
+                                  rescue.center == "2493" ~  1,
+                                  TRUE ~ 0))
+
+trainset0.regroup = trainset0.regroup%>%
+    mutate(alert.reason.category.regroup = case_when(alert.reason.category == 2 ~  1,
+                                  alert.reason.category == 3 ~  1,
+                                  TRUE ~ 0))
+
+testset0.regroup = testset0.regroup %>%
+    mutate(emergency.vehicle.type.regroup = case_when(emergency.vehicle.type == "VSAV BSPP" ~  1,
+                                  emergency.vehicle.type =="PSE" ~  1,
+                                  emergency.vehicle.type == "VID" ~  1,
+                                  emergency.vehicle.type == "CRF" ~  1,
+                                  emergency.vehicle.type == "FNPC" ~  1,
+                                  TRUE ~ 0))
+testset0.regroup = testset0.regroup  %>%
+    mutate(rescue.center.regroup = case_when(rescue.center == "2474" ~  1,
+                                  rescue.center =="2477" ~  1,
+                                  rescue.center == "2475" ~  1,
+                                  rescue.center == "2439" ~  1,
+                                  rescue.center == "2435" ~  1,
+                                  rescue.center == "2464" ~  1,
+                                  rescue.center == "2488" ~  1,
+                                  rescue.center == "2493" ~  1,
+                                  TRUE ~ 0))
+
+testset0.regroup = testset0.regroup  %>%
+    mutate(alert.reason.category.regroup = case_when(alert.reason.category == 2 ~  1,
+                                  alert.reason.category == 3 ~  1,
+                                  TRUE ~ 0))
+
+
+  
 ```
 
-```{r}
 
+```{r}
+importance_matrix_y1 <- xgb.importance(model = gb_1_dt)
+xgb.plot.importance(importance_matrix_y1[1:30,])
+importance_matrix_y1[1:30,]
 ```
+We find : 
+- OSRM data
+- Lat intervention
+- Long internvetion
+- statut.preceding-selection
+- emergency.vehicle.typeVID
+- emergency.vehicle.typePSE
+- emergency.vehicle.typeCRF
+- rescue.center2506, 2507, 2485, 2481, 2498, 2500
+- emergency.vehicle.typeVSAV BSPP
+- emergency.vehicle.typeFPT BSPP
+- alert.reason.category6
+- location.of.the.event139, 136, 259
 
 ```{r}
+trainset1.regroup <- trainset1
+testset1.regroup <- testset1
+
+trainset1.regroup = trainset1.regroup %>%
+    mutate(emergency.vehicle.type.regroup = case_when(emergency.vehicle.type == "VSAV BSPP" ~  1,
+                                  emergency.vehicle.type =="FPT BSPP" ~  1,
+                                  emergency.vehicle.type == "VID" ~  1,
+                                  emergency.vehicle.type == "CRF" ~  1,
+                                  emergency.vehicle.type == "PSE" ~  1,
+                                  TRUE ~ 0))
+
+trainset1.regroup = trainset1.regroup %>%
+    mutate(rescue.center.regroup = case_when(rescue.center == "2506" ~  1,
+                                  rescue.center =="2507" ~  1,
+                                  rescue.center == "2485" ~  1,
+                                  rescue.center == "2481" ~  1,
+                                  rescue.center == "2498" ~  1,
+                                  rescue.center == "2500" ~  1,
+                                  TRUE ~ 0))
+trainset1.regroup = trainset1.regroup %>%
+    mutate(location.of.the.event.regroup = case_when(location.of.the.event == "2506" ~  1,
+                                  location.of.the.event =="139" ~  1,
+                                  location.of.the.event == "136" ~  1,
+                                  rescue.center == "259" ~  1,
+                                  TRUE ~ 0))
+
+testset1.regroup = testset1.regroup %>%
+    mutate(emergency.vehicle.type.regroup = case_when(emergency.vehicle.type == "VSAV BSPP" ~  1,
+                                  emergency.vehicle.type =="FPT BSPP" ~  1,
+                                  emergency.vehicle.type == "VID" ~  1,
+                                  emergency.vehicle.type == "CRF" ~  1,
+                                  emergency.vehicle.type == "PSE" ~  1,
+                                  TRUE ~ 0))
+
+testset1.regroup = testset1.regroup %>%
+    mutate(rescue.center.regroup = case_when(rescue.center == "2506" ~  1,
+                                  rescue.center =="2507" ~  1,
+                                  rescue.center == "2485" ~  1,
+                                  rescue.center == "2481" ~  1,
+                                  rescue.center == "2498" ~  1,
+                                  rescue.center == "2500" ~  1,
+                                  TRUE ~ 0))
+testset1.regroup = testset1.regroup%>%
+    mutate(location.of.the.event.regroup = case_when(location.of.the.event == "2506" ~  1,
+                                  location.of.the.event =="139" ~  1,
+                                  location.of.the.event == "136" ~  1,
+                                  rescue.center == "259" ~  1,
+                                  TRUE ~ 0))
+
 
 ```
 
