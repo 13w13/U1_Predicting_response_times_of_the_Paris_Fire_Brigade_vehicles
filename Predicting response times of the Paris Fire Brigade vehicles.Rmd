@@ -1339,12 +1339,50 @@ We center the data
 
 
 ```{r}
-res.pca=PCA(data.fe, scale.unit=TRUE, ncp=11, graph=F,quali.sup =-c(21,20,19,18,17,16,14,9,8,2))
+res.pca=PCA(data.fe, scale.unit=TRUE, ncp=11, graph=F,quali.sup =c(22,21,20,13,11,10,9,6,5,4,3,1))
 ```
 
-Some error with quali variable. We will convert them into quanti
+```{r}
+summary(res.pca)
+```
+
+The "variance" row gives the amount of variance (or "eigenvalue") in the original variables accounted for by each component.When a component has an eigenvalue greater than 1, it means that it contains more information (ie. explains more variance in the dataset) than one individual variable. 
 
 ```{r}
+barplot(res.pca$eig[,1], main="Eigenvalues", names.arg=1:nrow(res.pca$eig))
+```
+
+
+We can stop at Dimension 8 because we have reached a cumulative variance of 99%
+
+Describe each axis according to the variables correlated with it using the dimdesc( ) 
+
+
+
+```{r}
+round(res.pca$eig,7)
+```
+The first 2 axes account for 40% of the total inertia. 
+```{r}
+inertia=res.pca$eig[,2]
+barplot(inertia,ylab="% Unertia",names.arg=round(inertia,8))+
+title("eigenvalues (inertias or variances of each component) in %")
+```
+
+```{r}
+res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=8, graph=F)
+graph.var (res.pca, new.plot=TRUE)
+```
+
+```{r}
+graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
+```
+
+
+
+
+
+
 data.variables.PCA <- data.fe %>%
   select(-emergency.vehicle.selection) %>%
   mutate(n = as.integer(n),
@@ -1360,55 +1398,146 @@ data.variables.PCA <- data.fe %>%
          location.of.the.event = as.integer(location.of.the.event),
          emergency.vehicle.type = as.integer(emergency.vehicle.type),
           departed.from.its.rescue.center = as.integer(departed.from.its.rescue.center)) %>% setDT
-```
 
 
-```{r}
+
 data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
-```
+
+## 6. Tree quick
 
 
+
+Store final dataset
 ```{r}
-
+dataset<-data.fe
 ```
 
-
-The "variance" row gives the amount of variance (or "eigenvalue") in the original variables accounted for by each component.When a component has an eigenvalue greater than 1, it means that it contains more information (ie. explains more variance in the dataset) than one individual variable. 
-
-```{r}
-barplot(res.pca$eig[,1], main="Eigenvalues", names.arg=1:nrow(res.pca$eig))
-```
-
-
-We can stop at Dimension 19 because we have reached a cumulative variance of 99%
-
-
-```{r}
-dimdesc(res.pca)
-```
 
 
 
 ```{r}
-round(res.pca$eig,7)
-```
-The first 2 axes account for 40% of the total inertia. 
-```{r}
-inertia=res.pca$eig[,2]
-barplot(inertia,ylab="% Unertia",names.arg=round(inertia,7))+
-title("eigenvalues (inertias or variances of each component) in %")
+n_train <- round(0.8 * nrow(dataset))
+train_indices <- sample(1:nrow(dataset), n_train)
+Data_train <- dataset[train_indices, ]
+Data_test <- dataset[-train_indices, ]
+
 ```
 
 ```{r}
-res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=7, graph=F)
-graph.var (res.pca, new.plot=TRUE)
+
+sparse_matrix <- sparse.model.matrix(delta.selection.departure ~ ., data = Data_train)[,-1]
+X_train_dmat = xgb.DMatrix(sparse_matrix, label = Data_train$delta.selection.departure)
 ```
 
 ```{r}
-graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
+dtrain <- xgb.DMatrix(sparse_matrix,label = Data_train$delta.selection.departure)
+```
+
+```{r}
+xgb_params <- list(colsample_bytree = 0.7, #variables per tree 
+                   subsample = 0.7, #data subset per tree 
+                   booster = "gbtree",
+                   max_depth = 5, #tree levels
+                   eta = 0.3, #shrinkage
+                   eval_metric = "rmse", 
+                   objective = "reg:linear",
+                   seed = 4321
+                   )
 ```
 
 
+```{r}
+set.seed(4321)
+gb_dt <- xgb.train(params = xgb_params,
+                   data = dtrain,
+                   print_every_n = 5,
+                   nrounds = 50)
+```
+
+
+```{r}
+sparse_matrix <- sparse.model.matrix(delta.selection.departure ~ ., data =Data_test )[,-1]
+```
+
+```{r}
+dtest <- xgb.DMatrix(sparse_matrix)
+```
+
+
+
+```{r}
+test_preds <- predict(gb_dt,dtest)
+```
+
+```{r}
+mse = mean((Data_test$delta.departure.presentation - test_preds)^2)
+```
+
+```{r}
+model <- xgb.dump(gb_dt)
+```
+
+```{r}
+model[1:10]
+```
+```{r}
+names <- dimnames(data.matrix(X[,-1]))[[2]]
+```
+
+
+```{r}
+importance_matrix <- xgb.importance(model = gb_dt)
+# Nice graph
+xgb.plot.importance(importance_matrix[1:10,])
+```
+
+
+```{r}
+library(tibble)
+imp_matrix <- as.tibble(xgb.importance(feature_names = colnames(Data_test %>% select(-delta.selection.departure)), model = gb_dt))
+
+imp_matrix %>%
+  ggplot(aes(reorder(Feature, Gain, FUN = max), Gain, fill = Feature)) +
+  geom_col() +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(x = "Features", y = "Importance")
+```
+
+
+### 6.2 Yo : Selection - Departure
+
+Remove id variable
+
+```{r}
+Data_test<-Data_test[,-c("emergency.vehicle.selection")]
+
+
+```
+
+Remove other Y
+
+```{r}
+
+Data_train<-Data_train[,-c("delta.departure.presentation","delta.selection.presentation")]
+
+```
+
+
+```{r}
+library(xgboost)
+
+xgbc = xgboost(data = as.matrix(Data_train[,-c("delta.selection.departure")]), label=(Data_train$delta.selection.departure),max.depth = 2, nrounds = 10)
+
+print(xgbc)
+
+```
+
+```{r}
+pred_y = predict(xgbc, Data_test[,-c("delta.departure.presentation","delta.selection.presentation")])
+
+mse = mean((Data_test$delta.departure.presentation - pred_y)^2)
+```
 
 ## 6. OLS - Regression
 
@@ -1419,6 +1548,29 @@ Store final dataset
 ```{r}
 dataset<-data.fe
 ```
+
+```{r}
+n_train <- round(0.8 * nrow(dataset))
+train_indices <- sample(1:nrow(dataset), n_train)
+Data_train <- dataset[train_indices, ]
+Data_test <- dataset[-train_indices, ]
+
+```
+
+
+```{r}
+library(caret)
+set.seed(4321)
+trainIndex <- createDataPartition(dataset$delta.selection.departure, p = 0.8, list = FALSE, times = 1)
+
+train <- train[trainIndex,]
+valid <- train[-trainIndex,]
+```
+
+
+
+
+
 
 We split data. We will keep x_test for final prediction
 ```{r}
@@ -1434,11 +1586,9 @@ testset<-testset[,-23]
 
 ### 6.2 Yo : Selection - Departure
 
-Remove id variables
+Remove id variable
 
 ```{r}
-trainingset<-trainingset[,-c("emergency.vehicle.selection","emergency.vehicle")]
-
 trainingset<-trainingset[,-c("emergency.vehicle.selection")]
 
 
@@ -1449,7 +1599,8 @@ Remove other Y
 ```{r}
 colnames(trainingset)
 
-trainingset<-trainingset[,-c("delta.departure.presentation","delta.selection.presentation")]
+Data_train<-Data_train[,-c("delta.departure.presentation","delta.selection.presentation")]
+
 ```
 
 
@@ -1458,11 +1609,23 @@ trainingset<-trainingset[,-c("delta.departure.presentation","delta.selection.pre
 
 options(max.print = 10000)
 
-lm <- lm(delta.selection.departure ~.,data = trainingset)
+lm <- lm(delta.selection.departure ~.,data = Data_train)
 
 summary(lm)
 
 
+```
+
+
+Test
+```{r}
+r_sq_1 <- summary(lm)$r.squared
+
+prediction_1 <- predict(lm, newdata =Data_test[,-c("delta.departure.presentation","delta.selection.presentation")])
+
+residuals_1 <- Data_test$delta.selection.departure - prediction_1
+rmse_1 <- sqrt(mean(residuals_1^2))
+print(paste0("R-squared for first model:", round(r_sq_1, 4)))
 ```
 
 
