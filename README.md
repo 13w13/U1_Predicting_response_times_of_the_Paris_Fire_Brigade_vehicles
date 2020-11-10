@@ -1,9 +1,14 @@
 ![ViewCount](https://views.whatilearened.today/views/github/13w13/U1_Predicting_response_times_of_the_Paris_Fire_Brigade_vehicles-.svg?cache=remove)
+Edgar Jullien, Antoine Settelen, Simon Weiss  
+---
+~2 week development
+
+
 # Introduction
 
 ## Presentation of the project
 
-This group project responds to **professor Nadine Galy instructions** written below :  
+This group project responds to **professor Nadine Galy instructions** written below for U1 - AI&BA - M2 TBS - Econometrics and Statitical Models Project :  
 The project involves identifying a real-world business problem or opportunity and designing and implementing an analysis plan to address it using at least one of the modelling methods studied in the course. You are free to choose any business problem or opportunity or public policy issue that you consider challenging and useful to address using business analytics.
 The data that you use should be readily available and verifiable.
 
