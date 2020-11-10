@@ -1,5 +1,5 @@
 ---
-title: "Predicting response times of the Paris Fire Brigade vehicles"
+title: "U1_Predicting_response_times_of_the_Paris_Fire_Brigade_vehicles"
 author: "Edgar Jullien, Antoine Settelen, Simon Weiss"
 date: '`r Sys.Date()`'
 
@@ -23,7 +23,7 @@ This group project responds to **professor Nadine Galy instructions** written be
 The project involves identifying a real-world business problem or opportunity and designing and implementing an analysis plan to address it using at least one of the modelling methods studied in the course. You are free to choose any business problem or opportunity or public policy issue that you consider challenging and useful to address using business analytics.
 The data that you use should be readily available and verifiable.
 
-This is a notebook for the [Paris Fire Brigate](https://paris-fire-brigade.github.io/data-challenge/challenge.html) data challenge 2020 with [ENS](https://challengedata.ens.fr/participants/challenges/21/) and [College de France](https://www.college-de-france.fr/site/stephane-mallat/Challenges-2020.htm).
+This is a notebook for the [Paris Fire Brigate](https://paris-fire-brigade.github.io/data-challenge/challenge.html) data challenge 2020 with [ENS](https://challengedata.ens.fr/participants/challenges/21/) and [College de France](https://www.college-de-france.fr/site/stephane-mallat/Challenges-2020.html).
 
 
 **The goal of this playground challenge** is to predict the *The response times of the Paris Fire Brigade vehicles * which is the delay between:
@@ -145,6 +145,7 @@ library(corrplot)
 library(Matrix)
 library(caret)
 
+devtools::install_github("boxuancui/DataExplorer", ref = "develop")
 ```
 
 ## 1.2 Load data, transform them into Datatable for better computation time and combine them. 
@@ -173,7 +174,7 @@ colnames(x_test) <- c
 Let's have an overview of the data sets using the *introduce* and *head* tools. First the training data:
 
 ```{r}
-plot_intro(data)
+#plot_intro(data)
 ```
 
 ```{r}
@@ -181,7 +182,7 @@ glimpse(data)
 ```
 
 ```{r}
-plot_intro(x_test)
+#plot_intro(x_test)
 ```
 
 ```{r}
