@@ -142,6 +142,8 @@ library(Hmisc)
 library(FactoMineR)
 library(BCA)
 library(corrplot)
+library(Matrix)
+library(caret)
 
 ```
 
@@ -909,13 +911,8 @@ levels(x_test$floor)<-list("-2"=c("-10","-9","-6","-5","-4","-3", "-2"),"-1"=c("
 ```
 
 
-#### Clean outliers for rescue.center
+#### 3.1.2.4 Clean outliers for rescue.center
 
-266 281
-266 294
-266 296
-266 323 
-266 324 
 
 
 ```{r}
@@ -964,90 +961,6 @@ Here we can see that thre is a median 90 s (1min 30) of time diffirence between 
 One max at 1000 second. 
 There is also min value which means that the brigate can also drive quickier than what OSRM predicted. 
 
-
-
-Normality study [if time]
-transform variables
-data.clean$log.longitude.intervention <- log(data.clean$longitude.intervention)
-data.clean$log.latitude.intervention<- log(data.clean$latitude.intervention)
-data.clean$log.delta.status.preceding.selection.selection <- log(data.clean$delta.status.preceding.selection.selection)
-data.clean$log.delta.position.gps.previous.departure.departure <- log(data.clean$delta.position.gps.previous.departure.departure) 
-data.clean$log.longitude.before.departure <- log(data.clean$longitude.before.departure)
-data.clean$log.latitude.before.departure <- log(data.clean$latitude.before.departure)
-data.clean$log.OSRM.estimated.distance <- log(data.clean$OSRM.estimated.distance)
-data.clean$log.OSRM.estimated.duration   <- log(data.clean$OSRM.estimated.duration)
-
-
-Histograms
-hist(data.clean$log.longitude.intervention, col="blue",main="Log longitude intervention")
-hist(data.clean$log.latitude.intervention, col="blue",main=" Log Latitutde intervention")
-hist(data.clean$log.delta.status.preceding.selection.selection , col="blue",main=" Log delta status preceding selection-selection")
-hist(data.clean$log.delta.position.gps.previous.departure.departure, col="blue",main="Log delta position gps previous departure-departure (int)")
-hist(data.clean$log.longitude.before.departure, col="blue",main="Log longitude before departure ")
-hist(data.clean$log.latitude.before.departure, col="blue",main="Log Latitude before departure ")
-hist(data.clean$log.OSRM.estimated.distance, col="blue",main="Log OSRM estimated distance")
-hist(data.clean$log.OSRM.estimated.duration, col="blue",main="Log OSRM estimated duration")
-
-
-Boxplot
-boxplot(data.clean$log.longitude.intervention, col="blue",main="Log longitude intervention")
-boxplot(data.clean$log.latitude.intervention, col="blue",main=" Log Latitutde intervention")
-boxplot(data.clean$log.delta.status.preceding.selection.selection , col="blue",main=" Log delta status preceding selection-selection")
-boxplot(data.clean$log.delta.position.gps.previous.departure.departure, col="blue",main="Log delta position gps previous departure-departure (int)")
-boxplot(data.clean$log.longitude.before.departure, col="blue",main="Log longitude before departure ")
-boxplot(data.clean$log.latitude.before.departure, col="blue",main="Log Latitude before departure ")
-boxplot(data.clean$log.OSRM.estimated.distance, col="blue",main="Log OSRM estimated distance")
-boxplot(data.clean$log.OSRM.estimated.duration, col="blue",main="Log OSRM estimated duration")
-summary(data.clean)
-
-
-Normality study
-QQ Plot
-when the variable is normally distributed
-points are aligned on the first bisector
-
-qqnorm(data.clean$floor, main="Normality floor")
-qqline(data.clean$floor)
-
-qqnorm(data.clean$longitude.intervention, main="Normality longitude intervention")
-qqline(data.clean$longitude.intervention)
-qqnorm(data.clean$log.longitude.intervention, main="Normality log longitude intervention")
-qqline(data.clean$log.longitude.intervention)
-
-qqnorm(data.clean$latitude.intervention, main="Normality latitude intervention")
-qqline(data.clean$latitude.intervention)
-qqnorm(data.clean$log.latitude.intervention, main="Normality log latitude intervention")
-qqline(data.clean$log.latitude.intervention)
-
-qqnorm(data.clean$delta.status.preceding.selection.selection, main="Normality delta status preceding selection-selection")
-qqline(data.clean$delta.status.preceding.selection.selection)
-qqnorm(data.clean$log.delta.status.preceding.selection.selection, main="Normality log delta status preceding selection-selectio")
-not possible
-
-qqnorm(data.clean$delta.position.gps.previous.departure.departure, main="Normality delta status preceding selection-selection")
-qqline(data.clean$delta.position.gps.previous.departure.departure)
-qqnorm(data.clean$log.delta.position.gps.previous.departure.departure, main="Normality log delta status preceding selection-selection")
-not possible
-
-qqnorm(data.clean$longitude.before.departure, main="Normality longitude before departure")
-qqline(data.clean$longitude.before.departure)
-qqnorm(data.clean$log.longitude.before.departure, main="Normality log longitude before departure")
-qqline(data.clean$log.longitude.before.departure)
-
-qqnorm(data.clean$latitude.before.departure, main="Normality latitude before departure")
-qqline(data.clean$latitude.before.departure)
-qqnorm(data.clean$log.latitude.before.departure, main="Normality log latitude before departure")
-qqline(data.clean$log.latitude.before.departure)
-
-qqnorm(data.clean$OSRM.estimated.distance, main="NormalityOSRM estimated distance")
-qqline(data.clean$OSRM.estimated.distance)
-qqnorm(data.clean$log.OSRM.estimated.distance, main="Normality log OSRM estimated distance")
-qqline(data.clean$log.OSRM.estimated.distance)
-
-qqnorm(data.clean$OSRM.estimated.duration, main="Normality OSRM estimated duration")
-qqline(data.clean$OSRM.estimated.duration)
-qqnorm(data.clean$log.OSRM.estimated.duration, main="Normality log OSRM estimated duration")
-qqline(data.clean$log.OSRM.estimated.duration)
 
 
 ## 4. Feature engineering
@@ -1352,11 +1265,11 @@ data.fe %>%
 
 We find : 
 
-- alert reason is correlated to alert reason.category (0,65).
+- Alert reason is correlated to alert reason.category (0,65).
 - OSRM estimated speed and OSRM distance are correlated (this is quite normal). We decide to keep the 2 features. 
 - Status departure before selection and departed from its rescue center are perfectly correlated. We remove status departure before selection. 
-- longitude.before.departure and longitude.intervention are highly correlated. We can remove longitude.before.departure
--latitude.before.departure and lat.intervention are highly correlated. We can remove lat.before.departure
+- Longitude.before.departure and longitude.intervention are highly correlated. We can remove longitude.before.departure
+- Latitude.before.departure and lat.intervention are highly correlated. We can remove lat.before.departure
 - Except for ORSM features, there is no high correlated feature. 
 
 ```{r}
@@ -1368,79 +1281,23 @@ x_test<-x_test[,-c("alert.reason","status.preceding.selection","longitude.before
 ```
 
 
-PCA
-
-A voir si on garde pca
-
-For the PCA, we analayse our variables 
-We center the data
-
-
-res.pca=PCA(data.fe, scale.unit=TRUE, ncp=11, graph=F,quali.sup =c(22,21,20,13,11,10,9,6,5,4,3,1))
-
-
-summary(res.pca)
-
-
-The "variance" row gives the amount of variance (or "eigenvalue") in the original variables accounted for by each component.When a component has an eigenvalue greater than 1, it means that it contains more information (ie. explains more variance in the dataset) than one individual variable. 
-
-barplot(res.pca$eig[,1], main="Eigenvalues", names.arg=1:nrow(res.pca$eig))
-
-
-
-We can stop at Dimension 8 because we have reached a cumulative variance of 99%
-
-Describe each axis according to the variables correlated with it using the dimdesc( ) 
-
-
-
-round(res.pca$eig,7)
-
-The first 2 axes account for 40% of the total inertia. 
-inertia=res.pca$eig[,2]
-barplot(inertia,ylab="% Unertia",names.arg=round(inertia,8))+
-title("eigenvalues (inertias or variances of each component) in %")
-
-
-graph.var (res.pca, new.plot=TRUE)
-
-
-graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
-
-
-
-
-
-
-data.variables.PCA <- data.fe %>%
-  select(-emergency.vehicle.selection) %>%
-  mutate(n = as.integer(n),
-         floor = as.integer(floor),
-         emergency.vehicle = as.integer(emergency.vehicle),
-         rescue.center = as.integer(rescue.center),
-         delta.selection.presentation = as.integer(delta.selection.presentation),
-         month = as.integer(month),
-         hours = as.integer(hours),
-        weekdays = as.integer(weekdays),
-         alert.reason.category = as.integer(alert.reason.category),
-         intervention.on.public.roads = as.integer(intervention.on.public.roads),
-         location.of.the.event = as.integer(location.of.the.event),
-         emergency.vehicle.type = as.integer(emergency.vehicle.type),
-          departed.from.its.rescue.center = as.integer(departed.from.its.rescue.center)) %>% setDT
-
-
-
-data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
-
 ## 6. Boosted Tree with XGB
-### 6.1 Sample 
 
+Boosted Tree aka XGBoost. XGBoost is a well-known and efficient open source implementation of the improved gradient tree algorithm.  
+Gradient boosting is a supervised learning algorithm, which attempts to accurately predict a target variable by combining estimates from a simpler and weaker set of models. GBoost reduces a regularized objective function (L1 and L2) that combines a convex loss function (based on the difference between predicted and target outputs) and a penalty condition for model complexity (in other words, regression tree functions).
+Training continues iteratively, adding new trees that predict residuals or errors from previous trees that are then combined with the previous trees to make the final prediction.
+
+In other words we are building a tree and looks which value is predicted poorly and assign to it higher weigh in our prediction.
+
+Let us build and predict our model with 100 maximum number of boosting iterations.
+
+
+### 6.1 Sample 
 
 Store final dataset
 ```{r}
 dataset<-data.fe
 ```
-
 
 
 Sample data
@@ -1501,7 +1358,7 @@ importance_matrix <- xgb.importance(model = gb_0_dt)
 xgb.plot.importance(importance_matrix[1:30,])
 ```
 We find : 
-- delta statut preceding selection
+- Delta statut preceding selection
 - Hours
 - Lat intervention
 - Long internvetion
@@ -1512,7 +1369,7 @@ We find :
 -departed from its rescue center1
 
 
-Predict
+Predict with testset0
 ```{r}
 sparse_matrix2 <- sparse.model.matrix( ~ ., data =testset0 )[,-1]
 ```
@@ -1534,7 +1391,7 @@ pred_xgboost_y0 <- predict(gb_0_dt,dtest)
 pred_xgboost_y0 %>% head
 testset$delta.selection.departure %>% head
 ```
-Compute MSE
+Compute MSE, MAE, R2
 ```{r}
 postResample(pred = pred_xgboost_y0, obs = testset$delta.selection.departure)
 
@@ -1637,7 +1494,7 @@ testset$delta.selection.presentation %>% head
 ```{r}
 postResample(pred = pred_xgboost_ys, obs = testset$delta.departure.presentation)
 ```
-No too bad accuracy
+No too bad accuracy ! 
 
 
 ### 6.5 Use feature importance to create group for factor variables for futur regression
@@ -1649,7 +1506,7 @@ xgb.plot.importance(importance_matrix_y0[1:30,])
 importance_matrix_y0[1:30,]
 ```
 We find : 
-- delta status preceding selection
+- Delta status preceding selection
 - Hours
 - Lat intervention
 - Long intervention
@@ -1709,19 +1566,6 @@ testset0.regroup = testset0.regroup  %>%
 
   
 ```
-- delta statut preceding selection
-- Hours
-- Lat intervention
-- Long internvetion
-- emergency vehicule type VSAV$VD (group is or not)
-- emergency.vehicle.typePSE
-- emergency.vehicle.typeVID
-- emergency.vehicle.typeCRF
-- emergency.vehicle.typeFNPC
-- ORSRM data
-- Rescue center 2474,2477,2475,2439, 2435,2464, 2488, 2493(group is or not)
-- Alert-reason-cat-03 -2
--departed from its rescue center1
 
 
 Drop not-important features in trainset0
@@ -1730,7 +1574,6 @@ Drop not-important features in trainset0
 ```{r}
 trainset0.regroup$rescue.center<-NULL
 trainset0.regroup$n<-NULL
-
 trainset0.regroup$emergency.vehicle.type<-NULL
 trainset0.regroup$floor<-NULL
 trainset0.regroup$emergency.vehicle<-NULL
@@ -1890,8 +1733,6 @@ summary(lm)
 All our coef are significants. We will check hypothesis in 6.2.3. 
 
 
-
-
 #### 6.1.2 Y0 : Multicolinéarity 
 
 ```{r}
@@ -1993,7 +1834,7 @@ vcov_y0_2 <- NeweyWest(lm)
 
 coeftest(lm, vcov. = vcov_y0_2)
 ```
-The estimated value of the coefficients remains, coefficients are still significant with this model 
+The estimated value of the coefficients remains, coefficients are still significant with this model. 
 
 
 #### 6.1.4 Y0 : Prediction
@@ -2008,7 +1849,7 @@ pred_reg_y0 %>% head
 testset$delta.selection.departure %>% head
 ```
 
-Compute MSE
+Compute R2
 ```{r}
 postResample(pred = pred_reg_y0, obs = testset0.regroup$delta.selection.departure)
 
@@ -2035,6 +1876,8 @@ trainset1.regroup$delta.departure.presentation<-trainset$delta.departure.present
 
 ```{r}
 testset1.regroup<-testset1.regroup[,-c("emergency.vehicle.selection")]
+testset1.regroup$delta.departure.presentation<-testset$delta.departure.presentation
+
 ```
 Same x_test
 ```{r}
@@ -2224,20 +2067,20 @@ pred_reg_final_y1 <- predict(lm1,x_test1.regroup[,-c("n")])
 
 ```{r}
 pred_reg_ys=pred_reg_y0+pred_reg_y1
-pred_xgboost=data.frame(pred_reg_y0,pred_reg_y1,pred_reg_ys)
+pred_reg=data.frame(pred_reg_y0,pred_reg_y1,pred_reg_ys)
 
-pred_xgboost %>% head
+pred_reg %>% head
 testset$delta.selection.presentation %>% head
 ```
 
 ```{r}
-postResample(pred = pred_xgboost_ys, obs = testset$delta.departure.presentation)
+postResample(pred = pred_reg_ys, obs = testset$delta.departure.presentation)
 ```
 No too bad accuracy ! 
 
 
 
-### 7 Actual predict : Compute Global for x_test
+### 7. Actual predict : Compute Global for x_test
 
 ```{r}
 pred_reg_final_ys=pred_reg_final_y0+pred_reg_final_y1
@@ -2245,7 +2088,8 @@ pred_final=data.frame(pred_reg_final_y0,pred_reg_final_y1,pred_reg_final_ys)
 pred_final %>% head
 ```
 
-add ID
+
+
 
 
 ```{r}
@@ -2290,16 +2134,7 @@ y_final[is.na(y_final)] <- 0
 
 
 ```{r}
-fwrite(y_final, "t.csv",sep=",")
-```
-
-```{r}
-y_final[y_final$`delta.departure.selection`==0]
-```
-
-
-```{r}
-write.csv(y_final,"C:/Users/swp/Documents/_Perso/Cours/M2/U1. Analytical Theory, Methods and Models/Econometrics and Statitical Models/0.Project/y_test.csv",sep=",",row.names=y_final$order_x_test.emergency.vehicle.selection)
+fwrite(y_final, "y_test.csv",sep=",")
 ```
 
 ## 8. Contributors
