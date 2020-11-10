@@ -1,13 +1,14 @@
 ---
 title: "U1_Predicting_response_times_of_the_Paris_Fire_Brigade_vehicles"
 author: "Edgar Jullien, Antoine Settelen, Simon Weiss"
-date: '`r Sys.Date()`'
-
+date: "`r Sys.Date()`"
 output:
   html_document:
-    number_sections: true
-    fig_caption: true
-    toc: true
+    number_sections: yes
+    fig_caption: yes
+    toc: yes
+  pdf_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -134,16 +135,15 @@ library(data.table)
 library(sandwich)
 library(dplyr)
 library(ggplot2)
-library(DataExplorer)
 library(hms)
 library(imputeTS)
 library(leaflet)
 library(Hmisc)
 library(FactoMineR)
-library(BCA)
 library(corrplot)
 library(Matrix)
 library(caret)
+library(xgboost)
 
 devtools::install_github("boxuancui/DataExplorer", ref = "develop")
 ```
@@ -202,13 +202,13 @@ We find :
 
 ```{r}
 # visualize missing data
-introduce(data)
-plot_missing(data)
+#introduce(data)
+#plot_missing(data)
 ```
 
 ```{r}
-introduce(x_train)
-plot_missing(x_train)
+#introduce(x_train)
+#plot_missing(x_train)
 
 ```
 
@@ -1598,6 +1598,46 @@ testset0.regroup$location.of.the.event<-NULL
 testset0.regroup$month<-NULL
 ```
 
+Same for x_test
+
+```{r}
+x_test0.regroup <- x_test
+
+x_test0.regroup = x_test0.regroup %>%
+    mutate(emergency.vehicle.type.regroup = case_when(emergency.vehicle.type == "VSAV BSPP" ~  1,
+                                  emergency.vehicle.type =="PSE" ~  1,
+                                  emergency.vehicle.type == "VID" ~  1,
+                                  emergency.vehicle.type == "CRF" ~  1,
+                                  emergency.vehicle.type == "FNPC" ~  1,
+                                  TRUE ~ 0))
+x_test0.regroup = x_test0.regroup %>%
+    mutate(rescue.center.regroup = case_when(rescue.center == "2474" ~  1,
+                                  rescue.center =="2477" ~  1,
+                                  rescue.center == "2475" ~  1,
+                                  rescue.center == "2439" ~  1,
+                                  rescue.center == "2435" ~  1,
+                                  rescue.center == "2464" ~  1,
+                                  rescue.center == "2488" ~  1,
+                                  rescue.center == "2493" ~  1,
+                                  TRUE ~ 0))
+  
+```
+
+
+
+```{r}
+x_test0.regroup$rescue.center<-NULL
+x_test0.regroup$emergency.vehicle.type<-NULL
+
+x_test0.regroup$n<-NULL
+x_test0.regroup$floor<-NULL
+x_test0.regroup$emergency.vehicle<-NULL
+x_test0.regroup$weekdays<-NULL
+x_test0.regroup$intervention.on.public.roads<-NULL
+x_test0.regroup$location.of.the.event<-NULL
+x_test0.regroup$month<-NULL
+```
+
 
 
 For Y1
@@ -1690,6 +1730,50 @@ testset1.regroup$emergency.vehicle.type<-NULL
 testset1.regroup$location.of.the.event<-NULL
 testset1.regroup$emergency.vehicle<-NULL
 testset1.regroup$departed.from.its.rescue.center<-NULL
+```
+
+
+
+
+
+
+Same for X_test
+
+```{r}
+x_test1.regroup <- x_test
+
+x_test1.regroup = x_test1.regroup %>%
+    mutate(emergency.vehicle.type.regroup = case_when(emergency.vehicle.type == "VSAV BSPP" ~  1,
+                                  emergency.vehicle.type =="FPT BSPP" ~  1,
+                                  emergency.vehicle.type == "VID" ~  1,
+                                  emergency.vehicle.type == "CRF" ~  1,
+                                  emergency.vehicle.type == "PSE" ~  1,
+                                  TRUE ~ 0))
+
+x_test1.regroup = x_test1.regroup %>%
+    mutate(rescue.center.regroup = case_when(rescue.center == "2506" ~  1,
+                                  rescue.center =="2507" ~  1,
+                                  rescue.center == "2485" ~  1,
+                                  rescue.center == "2481" ~  1,
+                                  rescue.center == "2498" ~  1,
+                                  rescue.center == "2500" ~  1,
+                                  TRUE ~ 0))
+x_test1.regroup = x_test1.regroup %>%
+    mutate(location.of.the.event.regroup = case_when(location.of.the.event == "2506" ~  1,
+                                  location.of.the.event =="139" ~  1,
+                                  location.of.the.event == "136" ~  1,
+                                  rescue.center == "259" ~  1,
+                                  TRUE ~ 0))
+```
+
+Drop not important features
+```{r}
+x_test1.regroup$rescue.center<-NULL
+x_test1.regroup$emergency.vehicle.type<-NULL
+x_test1.regroup$location.of.the.event<-NULL
+x_test1.regroup$emergency.vehicle<-NULL
+x_test1.regroup$departed.from.its.rescue.center<-NULL
+
 ```
 
 
@@ -2033,7 +2117,7 @@ x_test1.regroup %>% str
 ```
 
 ```{r}
-pred_reg_final_y1 <- predict(lm1,x_test1.regroup)
+#pred_reg_final_y1 <- predict(lm1,x_test1.regroup)
 ```
 
 New levels in x_test
@@ -2113,44 +2197,37 @@ pred_final$pred_reg_final_ys=pred_final$pred_reg_final_ys %>% as.integer
 
 Retrieve Order from challange
 ```{r}
-order_x_test<-read.csv("x_test.csv")
-order_x_test<-data.frame(order_x_test$emergency.vehicle.selection)
+#order_x_test<-read.csv("x_test.csv")
+#order_x_test<-data.frame(order_x_test$emergency.vehicle.selection)
 
-order_x_test %>% setDT
-order_x_test %>% head
+#order_x_test %>% setDT
+#order_x_test %>% head
+#str(order_x_test)
 
-y_final<-merge(order_x_test,pred_final, by.x = 'order_x_test.emergency.vehicle.selection', by.y = 'emergency-vehicle-selection', all = FALSE,sort=FALSE)
+#y_final<-merge(order_x_test,pred_final, by.x = 'order_x_test.emergency.vehicle.selection', by.y = 'emergency-vehicle-selection', all = FALSE,sort=FALSE)
 ```
 
 
 ```{r}
-y_final %>% str
+#y_final %>% str
 ```
 
 ```{r}
-sum(is.na(y_final))
-which(is.na(y_final))
-y_final[is.na(y_final)] <- 0
+#sum(is.na(y_final))
+#which(is.na(y_final))
+#y_final[is.na(y_final)] <- 0
 ```
 
 
 ```{r}
-fwrite(y_final, "y_test.csv",sep=",")
+#fwrite(y_final, "y_test.csv",sep=",")
 ```
 
 ## 8. Contributors
 
-
-
-Liens notebook inspiration artistique : 
-Les notebooks qui ont déja fait le challenge : 
 https://github.com/quachn/X_PFB
 https://github.com/Gguinet/Fire-Brigade-Challenge/blob/master/.ipynb_checkpoints/Code-checkpoint.ipynb
 
-
-
-
-Les notebooks traitant du même type de problème : 
 https://medium.com/crim/predicting-the-response-times-of-firefighters-using-data-science-da79f6965f93
 https://www.kaggle.com/gaborfodor/from-eda-to-the-top-lb-0-367
 https://www.kaggle.com/karelrv/nyct-from-a-to-z-with-xgboost-tutorial
