@@ -10,22 +10,6 @@ output:
     toc: true
 ---
 
-
-Liens notebook inspiration artistique : 
-Les notebooks qui ont déja fait le challenge : 
-https://github.com/quachn/X_PFB
-https://github.com/Gguinet/Fire-Brigade-Challenge/blob/master/.ipynb_checkpoints/Code-checkpoint.ipynb
-
-
-
-
-Les notebooks traitant du même type de problème : 
-https://medium.com/crim/predicting-the-response-times-of-firefighters-using-data-science-da79f6965f93
-https://www.kaggle.com/gaborfodor/from-eda-to-the-top-lb-0-367
-https://www.kaggle.com/karelrv/nyct-from-a-to-z-with-xgboost-tutorial
-https://www.kaggle.com/headsortails/nyc-taxi-eda-update-the-fast-the-curious
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -35,7 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Presentation of the project
 
-This group project responds to the **prof Nadine Galy instructions** written below :  
+This group project responds to **professor Nadine Galy instructions** written below :  
 The project involves identifying a real-world business problem or opportunity and designing and implementing an analysis plan to address it using at least one of the modelling methods studied in the course. You are free to choose any business problem or opportunity or public policy issue that you consider challenging and useful to address using business analytics.
 The data that you use should be readily available and verifiable.
 
@@ -52,7 +36,7 @@ This measurement is composed by the 2 following periods of time:
 
 Based on features like trip coordinates, pickup date, type of the arrivall destination, vehicules etc.. 
 
-The [data](https://challengedata.ens.fr/participants/challenges/21/) which covers the entier year 2018 for which inoperable data have been squeezed out comes in the shape of 219 337 training observations and 108 033 test observation. The dataset covers the entire year 
+The [data](https://challengedata.ens.fr/participants/challenges/21/) which covers the entier year 2018 for which inoperable data have been squeezed out comes in the shape of 219 337 training observations and 108 033 test observation. The dataset covers the entire year of 2018. 
 Each row contains one Paris fire brigade intervention.
 
 "Response time is one of the most important factors for firefighters because their ability to save lives and rescue people depends on it. Every fire department in the world seeks strategies to decrease their response time, and several analyses have been conducted in the past years to determine what could impact response time. In the meantime, fire departments have been collecting data on their interventions; yet, few of them actually use data science to develop a data-driven decision making approach."https://medium.com/crim/predicting-the-response-times-of-firefighters-using-data-science-da79f6965f93
@@ -62,7 +46,7 @@ Each row contains one Paris fire brigade intervention.
 
 
 
-**In this notebook**, we will first study and visualize the original data, engineer new features, and examine potential outliers. Then... 
+**In this notebook**, we will first study and visualize the original data, engineer new features, and examine potential outliers. Then, we implement a boosted Tree for our first model, do some dimension reductions on qualitative features and implement a linear regression. Finaly, we created a final predict and uploaded it to the data plateforme. 
 
 We hope that this notebook will have good results to the challenge and responds fully to Nadine Galy requirement.
 As always, any feedback, questions, or constructive criticism are much appreciated.
@@ -203,15 +187,12 @@ glimpse(x_test)
 ```
 
 We find : 
-- we have a great mix of qualitative data and quantitative data
-- some quali data are characters such as "status.preceding.selection, other dummy variables coded 0,1 such as $intervention.on.public.roads
-- we have NA values
+- We have a great mix of qualitative data and quantitative data
+- Some quali data are characters such as "status.preceding.selection, other dummy variables coded 0,1 such as $intervention.on.public.roads
+- We have NA values
 - We have ID variables that we can remove
 - We will have to deal with outliers
-- Mean of 
-** `delta selection-departure`(int): elapsed time in seconds between the selection and the departure of the emergency vehicle
-* **[TO PREDICT]** `delta departure-presentation`(int): elapsed time in seconds between the departure of the emergency vehicle and its presentation on the intervention scene
-* **[TO PREDICT]** `delta selection-presentation `(int): elapsed time in seconds between the selection of the emergency vehicle and its presentation on the intervention scene (delta selection-departure + delta departure-presentation)
+
 
 
 ## 1.4 Missing values
@@ -229,7 +210,7 @@ plot_missing(x_train)
 ```
 
 
-We delete the useless column and the raw with empty cells
+We remoev the useless column and the raw with empty cells
 ```{r}
 data <- data[,-24] # delete the column OSMR response json object
 data <- data[,-21] #delete the column delta position gps
@@ -259,7 +240,6 @@ which(is.na(data))
 y_train <- na.omit(y_train)
 x_train<-na.omit(x_train)
 ```
-Attention : combine en fonction de 'id intervention
 
 
 ## 1.5 Convertion into right format
@@ -329,7 +309,7 @@ data.quanti<-data[,-c(3,4,5,6,7,10,11,12,15,17,24,25,26)]
 # 2. EDA
 
 ## 2.1 Intro : map 
-We start with a map of Paris and overlay a manageable number of coordinates to get a general overview of the locations and distances in question. For this visualization we use the [leaflet](https://rstudio.github.io/leaflet/) package, which includes a variety of cool tools for interactive maps. In this map you can zoom and pan through the intervention locations:
+We start with a map of Paris and overlay a manageable number of coordinates to get a general overview of the locations and distances in question. For this visualization we use the [leaflet](https://rstudio.github.io/leaflet/) package, which includes a variety of nice tools for interactive maps. In this map you can zoom and pan through the intervention locations:
 
 ```{r fig.align = 'default', warning = FALSE, fig.cap ="Fig. 1", out.width="100%"}
 set.seed(1234)
@@ -341,7 +321,6 @@ leaflet(data = foo) %>% addProviderTiles("Esri.NatGeoWorldMap") %>%
 
 ```
 
-Comment maps : 
 
 ## 2.2 Dependant Variables Ys
 We have 2 dependant variables and 1 global variable
@@ -363,15 +342,15 @@ data %>%
   theme_minimal()
 ```
 
-Note the logarithmic x-axis and square-root y-axis.
+Note the logarithmic x-axis and square-root y-axis.   
 
 We find:
 
-    the majority of vehicule rather timinh follow a rather smooth distribution that looks almost log-normal with a peak just short of 200 seconds, i.e. about 4 minutes.
+- Whe majority of vehicule rather timinh follow a rather smooth distribution that looks almost log-normal with a peak just short of 200 seconds, i.e. about 4 minutes.
 
-    There are several suspiciously short rides with less than 10 seconds duration.
+- There are several suspiciously short rides with less than 10 seconds duration.
 
-    Additionally, there is a strange delta-shaped peak of trip_duration just before the 1e5 seconds mark and even a few way above it:
+- Additionally, there is a strange delta-shaped peak of trip_duration just before the 1e5 seconds mark and even a few way above it:   
     
 Plot density distribution the time to present to the place
 ```{r}
@@ -387,14 +366,10 @@ We find:
 
 - same smooth distribution that looks almost log-normal with a peak around 400, 500 seconds, i.e. about 6 minutes.
 
-From previous observation. 
-
-Global variable : selection to arrival
+- Global variable : selection to arrival
 around 8 to 10 mintues. 
 
-
-
-In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
+- In many fire departments the measurement of turnout time and travel time are done manually. An officer presses a button located in the vehicle to signal his departure and his arrival. This process introduces irregularities and variation in the data, which will need to be cleaned. 
 
 
 
@@ -407,7 +382,7 @@ data %>%
   geom_boxplot() 
 ```
 
-
+For delta.departure. presentation
 ```{r}
 data %>% 
   ggplot(aes(delta.departure.presentation)) +
@@ -426,7 +401,7 @@ corr
 corrplot(y_train_cor, method="square",type="upper", order="hclust", tl.col="black", tl.srt=45)
 ```
 
-The 2 Ys are not corr between them
+The 2 Ys are not corr between them. 
 
 
 ### 2.2.1 Manage outliers for Ys values
@@ -452,7 +427,7 @@ y_train %>%
   labs(x="Group", y="count") +
   theme_minimal()
 ```
-Most of data is around 0 to 12 max minutes for 
+Most of data is around 0 to 12 max minutes for delta.selection.departure. 
 
 
 Departure to presentation
@@ -1393,7 +1368,7 @@ x_test<-x_test[,-c("alert.reason","status.preceding.selection","longitude.before
 ```
 
 
-##### PCA
+PCA
 
 A voir si on garde pca
 
@@ -1401,19 +1376,16 @@ For the PCA, we analayse our variables
 We center the data
 
 
-```{r}
 res.pca=PCA(data.fe, scale.unit=TRUE, ncp=11, graph=F,quali.sup =c(22,21,20,13,11,10,9,6,5,4,3,1))
-```
 
-```{r}
+
 summary(res.pca)
-```
+
 
 The "variance" row gives the amount of variance (or "eigenvalue") in the original variables accounted for by each component.When a component has an eigenvalue greater than 1, it means that it contains more information (ie. explains more variance in the dataset) than one individual variable. 
 
-```{r}
 barplot(res.pca$eig[,1], main="Eigenvalues", names.arg=1:nrow(res.pca$eig))
-```
+
 
 
 We can stop at Dimension 8 because we have reached a cumulative variance of 99%
@@ -1422,23 +1394,18 @@ Describe each axis according to the variables correlated with it using the dimde
 
 
 
-```{r}
 round(res.pca$eig,7)
-```
+
 The first 2 axes account for 40% of the total inertia. 
-```{r}
 inertia=res.pca$eig[,2]
 barplot(inertia,ylab="% Unertia",names.arg=round(inertia,8))+
 title("eigenvalues (inertias or variances of each component) in %")
-```
 
-```{r}
+
 graph.var (res.pca, new.plot=TRUE)
-```
 
-```{r}
+
 graph.var (res.pca, lim.cos2.var=0.5, new.plot=TRUE)
-```
 
 
 
@@ -1465,7 +1432,7 @@ data.variables.PCA <- data.fe %>%
 
 data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
 
-## 6. Tree quick
+## 6. Boosted Tree with XGB
 ### 6.1 Sample 
 
 
@@ -1886,8 +1853,7 @@ testset1.regroup$departed.from.its.rescue.center<-NULL
 ## 6. OLS - Regression
 
 
-
-### 6.2 Yo : Selection - Departure
+### 6.1 Yo : Selection - Departure
 
 Remove id variable
 
@@ -1903,6 +1869,11 @@ testset0.regroup$delta.selection.departure<-testset$delta.selection.departure
 
 ```
 
+Same x_test
+```{r}
+x_test0.regroup<-x_test0.regroup[,-c("emergency.vehicle.selection")]
+```
+
 
 ```{r}
 #Linear Regression,
@@ -1916,11 +1887,12 @@ summary(lm)
 
 ```
 
-All our coefficients are significant. We will check hypothesis in 6.2.3. 
+All our coef are significants. We will check hypothesis in 6.2.3. 
 
 
 
-#### 6.2.3 Y0 : Multicolinéarity 
+
+#### 6.1.2 Y0 : Multicolinéarity 
 
 ```{r}
 library(sandwich)
@@ -1933,14 +1905,14 @@ Except for OSRM data, no high correlated coefficient. We decide to keep them as 
 
 
 
-#### 6.2.4 Residuals analysis
+#### 6.1.3 Residuals analysis
 
 Study the residuals of the selected model
 What we've done is not enough to validate the model. We need to study the residuals
 if hypothesis are not validated (see course.), the test of the coefficient are false 
 Study the residuals of the selected model
 
-##### 6.2.4.1 Is residuals means 0?
+##### 6.1.3.1 Is residuals means 0?
 
 ```{r}
 #mean of residuals
@@ -1948,7 +1920,7 @@ summary(lm$residuals)
 ```
 Yes it is !
 
-##### 6.2.3.2 Are residuals normally distributed?
+##### 6.1.3.2 Are residuals normally distributed?
 
 Normality test : shapiro test
 H0 : Normality and H1 : no normality
@@ -1965,7 +1937,7 @@ qqnorm(lm$residuals)
 qqline(lm$residuals)
 ```
 
-##### 6.2.3.3 Are residuals homoskedastic?
+##### 6.1.3.3 Are residuals homoskedastic?
 
 1. First model which is not considering heteroskedasticity
 
@@ -2024,7 +1996,7 @@ coeftest(lm, vcov. = vcov_y0_2)
 The estimated value of the coefficients remains, coefficients are still significant with this model 
 
 
-#### 6.2.4 Y0 : Prediction
+#### 6.1.4 Y0 : Prediction
 
 
 ```{r}
@@ -2042,7 +2014,16 @@ postResample(pred = pred_reg_y0, obs = testset0.regroup$delta.selection.departur
 
 ```
 
-### 6.3 Y1 
+
+Pred for x_0
+
+```{r}
+pred_reg_final_y0 <- predict(lm,x_test0.regroup)
+```
+
+
+
+### 6.2 Y1 
 
 Remove id variable
 
@@ -2054,9 +2035,13 @@ trainset1.regroup$delta.departure.presentation<-trainset$delta.departure.present
 
 ```{r}
 testset1.regroup<-testset1.regroup[,-c("emergency.vehicle.selection")]
-testset1.regroup$delta.departure.presentation<-testset$delta.departure.presentation
-
 ```
+Same x_test
+```{r}
+x_test1.regroup<-x_test1.regroup[,-c("emergency.vehicle.selection")]
+```
+
+
 
 
 ```{r}
@@ -2072,7 +2057,7 @@ summary(lm1)
 
 ```
 All our coefficients are significants 
-#### 6.3.2 Y1 : Multicolinéarity 
+#### 6.2.2 Y1 : Multicolinéarity 
 
 ```{r}
 library(sandwich)
@@ -2085,14 +2070,14 @@ vif(lm1)
 ```
 Except for OSRM data, no high correlated coefficient. We decide to keep them as they are important for our model. 
 
-#### 6.3.3 Y1 : Residuals analysis
+#### 6.2.3 Y1 : Residuals analysis
 
 Study the residuals of the selected model
 What we've done is not enough to validate the model. We need to study the residuals
 if hypothesis are not validated (see course.), the test of the coefficient are false 
 Study the residuals of the selected model
 
-##### 6.3.3.1 Is residuals means 0?
+##### 6.2.3.1 Is residuals means 0?
 
 ```{r}
 #mean of residuals
@@ -2100,7 +2085,7 @@ summary(lm1$residuals)
 ```
 Yes it is !
 
-##### 6.3.3.2 Are residuals normally distributed?
+##### 6.2.3.2 Are residuals normally distributed?
 
 Normality test : shapiro test
 H0 : Normality and H1 : no normality
@@ -2126,7 +2111,7 @@ qqline(lm1$residuals)
 
 ```
 
-##### 6.3.3.3 Are residuals homoskedastic?
+##### 6.2.3.3 Are residuals homoskedastic?
 
 1. First model which is not considering heteroskedasticity
 
@@ -2161,7 +2146,7 @@ coeftest(lm, vcov. = vcov_y1)
 ```
 The estimated value of the coefficients remains, coefficients are still significant with this model 
 
-##### 6.3.3.4 Are the residuals correlated ?
+##### 6.2.3.4 Are the residuals correlated ?
 
 1. First model taking into account heteroskedasticity
 
@@ -2177,7 +2162,7 @@ coeftest(lm1, vcov. = vcov_y1_2)
 ```
 The estimated value of the coefficients remains, coefficients are still significant with this model 
 
-#### 6.3.4 Y1 : Prediction
+### 6.3.4 Y1 : Prediction
 
 
 ```{r}
@@ -2196,6 +2181,43 @@ postResample(pred = pred_reg_y1, obs = testset1.regroup$delta.departure.presenta
 ```
 
 
+#### Pred for x_1
+
+```{r}
+testset1.regroup %>% str
+x_test1.regroup %>% str
+```
+
+```{r}
+pred_reg_final_y1 <- predict(lm1,x_test1.regroup)
+```
+
+New levels in x_test
+
+```{r}
+testset1.regroup$n %>% levels
+x_test1.regroup$n %>% levels
+```
+
+
+Re_train model without n-levels
+
+```{r}
+#Linear Regression,
+
+options(max.print = 10000)
+
+lm1 <- lm(delta.departure.presentation ~.,data = trainset1.regroup[,-c("n")])
+
+
+summary(lm1)
+
+
+```
+```{r}
+pred_reg_final_y1 <- predict(lm1,x_test1.regroup[,-c("n")])
+
+```
 
 
 ### 6.4 Ys : Compute global
@@ -2215,83 +2237,86 @@ No too bad accuracy !
 
 
 
-### 7 Actual predict [if time]
-
-
-Now that we have our models, we can use predict for x_test as challenge request. 
+### 7 Actual predict : Compute Global for x_test
 
 ```{r}
-x_test<-x_test[,-1]
+pred_reg_final_ys=pred_reg_final_y0+pred_reg_final_y1
+pred_final=data.frame(pred_reg_final_y0,pred_reg_final_y1,pred_reg_final_ys)
+pred_final %>% head
+```
+
+add ID
+
+
+```{r}
+pred_final$id<-x_test$emergency.vehicle.selection
+```
+Change order
+```{r}
+pred_final <- pred_final[, c(4, 1, 2, 3)]
+
+```
+
+Conver into integer
+```{r}
+pred_final$pred_reg_final_y0=pred_final$pred_reg_final_y0 %>% as.integer()
+pred_final$pred_reg_final_y1=pred_final$pred_reg_final_y1 %>% as.integer()
+pred_final$pred_reg_final_ys=pred_final$pred_reg_final_ys %>% as.integer
 ```
 
 
-Y0
-Predict
-Problem : not the same one hot encoding ...114 column missing
 
-
+Retrieve Order from challange
 ```{r}
-sparse_matrix3 <- sparse.model.matrix( ~ ., data =x_test )[,-1]
-```
+order_x_test<-read.csv("x_test.csv")
+order_x_test<-data.frame(order_x_test$emergency.vehicle.selection)
 
-Store into xgb Matrix
+order_x_test %>% setDT
+order_x_test %>% head
 
-
-
-```{r}
-dtest <- xgb.DMatrix(sparse_matrix3)
-```
-
-
-```{r}
-gb_0_dt$feature_names %>% head
-colnames(dtest)
-```
-
-
-```{r}
-pred_xgboost_y0_final <- predict(gb_0_dt,dtest )
-```
-
-
-```{r}
-object <- xgb.Booster.complete(gb_0_dt, saveraw = FALSE)
-object[["feature_names"]]
-```
-
-```{r}
-colnames(dtest)
+y_final<-merge(order_x_test,pred_final, by.x = 'order_x_test.emergency.vehicle.selection', by.y = 'emergency-vehicle-selection', all = FALSE,sort=FALSE)
 ```
 
 
 ```{r}
-pred_xgboost_y0_final %>% head
-```
-
-Y1
-Predict
-```{r}
-pred_xgboost_y1_final <- predict(gb_1_dt,dtest)
+y_final %>% str
 ```
 
 ```{r}
-pred_xgboost_y1_final %>% head
-
-```
-
-Ys
-```{r}
-pred_xgboost_final_ys=pred_xgboost_y0_final+pred_xgboost_y1_final
-pred_final_xgboost=data.frame(pred_xgboost_y0_final,pred_xgboost_y1_final,pred_xgboost_final_ys)
-
-dim(x_test)
-
-write.csv(pred_final_xgboost,"C:/Users/swp/Documents/_Perso/Cours/M2/U1. Analytical Theory, Methods and Models/Econometrics and Statitical Models/0.Project/1stsubmit.csv", row.names = FALSE)
+sum(is.na(y_final))
+which(is.na(y_final))
+y_final[is.na(y_final)] <- 0
 ```
 
 
 ```{r}
-
+fwrite(y_final, "t.csv",sep=",")
 ```
 
+```{r}
+y_final[y_final$`delta.departure.selection`==0]
+```
+
+
+```{r}
+write.csv(y_final,"C:/Users/swp/Documents/_Perso/Cours/M2/U1. Analytical Theory, Methods and Models/Econometrics and Statitical Models/0.Project/y_test.csv",sep=",",row.names=y_final$order_x_test.emergency.vehicle.selection)
+```
+
+## 8. Contributors
+
+
+
+Liens notebook inspiration artistique : 
+Les notebooks qui ont déja fait le challenge : 
+https://github.com/quachn/X_PFB
+https://github.com/Gguinet/Fire-Brigade-Challenge/blob/master/.ipynb_checkpoints/Code-checkpoint.ipynb
+
+
+
+
+Les notebooks traitant du même type de problème : 
+https://medium.com/crim/predicting-the-response-times-of-firefighters-using-data-science-da79f6965f93
+https://www.kaggle.com/gaborfodor/from-eda-to-the-top-lb-0-367
+https://www.kaggle.com/karelrv/nyct-from-a-to-z-with-xgboost-tutorial
+https://www.kaggle.com/headsortails/nyc-taxi-eda-update-the-fast-the-curious
 
