@@ -1168,7 +1168,6 @@ x_test$hours <- replace(x_test$hours, is.na(x_test$hours), "00:00:00")
 ```{r}
 data.fe$hours <- substr(data.fe$hours, 1, 2)
 x_test$hours <- substr(x_test$hours, 1, 2)
-
 ```
 
 
@@ -1447,7 +1446,6 @@ title("eigenvalues (inertias or variances of each component) in %")
 ```
 
 ```{r}
-res.pca=PCA(data.variables.PCA, scale.unit=TRUE, ncp=8, graph=F)
 graph.var (res.pca, new.plot=TRUE)
 ```
 
@@ -1968,13 +1966,7 @@ Yes it is !
 Normality test : shapiro test
 H0 : Normality and H1 : no normality
 ```{r}
-
-shapiro.test(lm$residuals)
-
-#Error in shapiro.test(regmult3$residuals) : la taille de l'échantillon doit être comprise entre 3 et 5000
-
 library(tseries)
-
 jarque.bera.test(lm$residuals)
 
 ```
@@ -1982,10 +1974,8 @@ No normality because p-value is << 5%. Here, residuals are not normally distribu
 NB : non normality could appear because of outliers. This is not the case here. 
 
 ```{r}
-
 qqnorm(lm$residuals)
 qqline(lm$residuals)
-
 ```
 
 ##### 6.2.3.3 Are residuals homoskedastic?
@@ -2011,21 +2001,14 @@ In case of heteroskedasticity, we have to use a robust standard error estimator.
 
 2. Second model taking into account heteroskedasticity
 
+We calculate the robust covariance matrix
 ```{r}
-
 library(sandwich)
-
-#Calculate the robust covariance matrix
-
-vcov2 <- vcovHC(lm5, type = "HC1")
-
-coeftest(lm5, vcov. = vcov2)
-
-#The estimated value of the coefficients remains
-#the same but the value of the t-test changes.
-#A coefficient could be significant in the first
-#model and no more in the second
+vcov_y0 <- vcovHC(lm, type = "HC1")
+coeftest(lm, vcov. = vcov_y0)
 ```
+The estimated value of the coefficients remains, cofficients are still significant with this model 
+
 
 ##### 6.2.3.4 Are the residuals correlated ?
 
@@ -2037,14 +2020,7 @@ H1 : Residuals are autocorrelated
 
 1. First model which is not considering heteroskedasticity
 
-```{r}
-
-library(car)
-
-# Durbin Watson test where H0 : residuals are not autocorrelated against H1 : residuals are aucorrelated
-durbinWatsonTest (lm,max.lag=1)
-
-```
+We can't use the Durbin-Waston test since the size of our linear regression
 
 2. Second model taking into account heteroskedasticity
 
@@ -2054,15 +2030,12 @@ library(sandwich)
 
 #Calculate the robust covariance matrix
 
-vcov4 <- NeweyWest(lm3)
+vcov_y0_2 <- NeweyWest(lm)
 
-coeftest(lm3, vcov. = vcov2)
-
-#The estimated value of the coefficients remains
-#the same but the value of the t-test changes.
-#A coefficient could be significant in the first
-#model and no more in the second
+coeftest(lm, vcov. = vcov_y0_2)
 ```
+The estimated value of the coefficients remains, cofficients are still significant with this model 
+
 
 #### 6.2.4 Y0 : Prediction
 
@@ -2115,13 +2088,14 @@ summary(lm1)
 
 
 ```
+All our coefficients are significants 
 #### 6.3.2 Y1 : Multicolinéarity 
 
 ```{r}
 library(sandwich)
 library(car)
 
-vif(lm)
+vif(lm1)
 
 #variables qualitatives 
 
@@ -2138,7 +2112,7 @@ Study the residuals of the selected model
 
 ```{r}
 #mean of residuals
-summary(lm$residuals) 
+summary(lm1$residuals) 
 ```
 Yes it is !
 
@@ -2147,19 +2121,14 @@ Yes it is !
 Normality test : shapiro test
 H0 : Normality and H1 : no normality
 ```{r}
-
-shapiro.test(lm1$residuals)
-
-#Error in shapiro.test(regmult3$residuals) : la taille de l'échantillon doit être comprise entre 3 et 5000
-
 library(tseries)
 
-jarque.bera.test(lm$residuals)
+jarque.bera.test(lm1$residuals)
 
 
 #install.packages("nortest")
 library(nortest)
-ad.test(lm$residuals)
+ad.test(lm1$residuals)
 
 
 ```
@@ -2168,8 +2137,8 @@ NB : non normality could appear because of outliers. This is not the case here.
 
 ```{r}
 
-qqnorm(lm$residuals)
-qqline(lm$residuals)
+qqnorm(lm1$residuals)
+qqline(lm1$residuals)
 
 ```
 
@@ -2179,13 +2148,13 @@ qqline(lm$residuals)
 
 ```{r}
 
-plot(lm5$residuals~lm$fitted)
+plot(lm1$residuals~lm$fitted)
 
 library(lmtest)
 
 # Breush Pagan test H0 : homoskedasticity against H1 : heteroskedasticity 
 
-bptest(lm)
+bptest(lm1)
 
 ```
 pvalue << 5%, we reject H0
@@ -2202,37 +2171,15 @@ library(sandwich)
 
 #Calculate the robust covariance matrix
 
-vcov2 <- vcovHC(lm5, type = "HC1")
+vcov_y1 <- vcovHC(lm1, type = "HC1")
 
-coeftest(lm, vcov. = vcov2)
-
-#The estimated value of the coefficients remains
-#the same but the value of the t-test changes.
-#A coefficient could be significant in the first
-#model and no more in the second
+coeftest(lm, vcov. = vcov_y1)
 ```
+The estimated value of the coefficients remains, cofficients are still significant with this model 
 
 ##### 6.3.3.4 Are the residuals correlated ?
 
-There are several tests for autocorrelation
-Durbin-Watson test is one of the most often used
-
-H0 : Residuals are non autocorrelated
-H1 : Residuals are autocorrelated
-
-1. First model which is not considering heteroskedasticity
-
-```{r}
-
-library(car)
-
-# Durbin Watson test where H0 : residuals are not autocorrelated against H1 : residuals are aucorrelated
-durbinWatsonTest (lm3,max.lag=1)
-
-# doesn't work....
-```
-
-2. Second model taking into account heteroskedasticity
+1. First model taking into account heteroskedasticity
 
 ```{r}
 
@@ -2240,16 +2187,11 @@ library(sandwich)
 
 #Calculate the robust covariance matrix
 
-vcov4 <- NeweyWest(lm3)
+vcov_y1_2 <- NeweyWest(lm1)
 
-coeftest(lm3, vcov. = vcov2)
-
-#The estimated value of the coefficients remains
-#the same but the value of the t-test changes.
-#A coefficient could be significant in the first
-#model and no more in the second
+coeftest(lm1, vcov. = vcov_y1_2)
 ```
-
+The estimated value of the coefficients remains, cofficients are still significant with this model 
 
 #### 6.3.4 Y1 : Prediction
 
