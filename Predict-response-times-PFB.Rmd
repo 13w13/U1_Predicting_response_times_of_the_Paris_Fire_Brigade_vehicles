@@ -144,7 +144,7 @@ library(DataExplorer)
 ```{r}
 x_train <- read.csv("x_train.csv") %>% setDT
 y_train <- read.csv("y_train.csv") %>% setDT
-x_test <- read.csv("x_test.csv") %>% setDT
+x_test1 <- read.csv("x_test.csv") %>% setDT
 #View(x_train)
 data <- cbind(x_train,y_train[,-1])#we don't keep id vehicule selection for no duplicate
 
@@ -159,8 +159,13 @@ c<- colnames(x_test)
 c[14] <- "date.key.selection"
 c[15] <- "time.key.selection"
 colnames(x_test) <- c
+
 ```
 
+Store Id order for x_test
+```{r}
+id_order<-data.frame(x_test1$emergency.vehicle.selection)
+```
 
 ### 1.3 File structure and content
 Let's have an overview of the data sets using the *introduce* and *head* tools. First the training data:
@@ -1287,6 +1292,10 @@ Let us build and predict our model with 100 maximum number of boosting iteration
 
 ### 6.1 Sample 
 
+```{r}
+data.fe %>% str
+```
+
 Store final dataset
 ```{r}
 dataset<-data.fe
@@ -1295,22 +1304,33 @@ dataset<-data.fe
 
 Sample data
 ```{r}
-n_train <- round(0.8 * nrow(dataset))
+set.seed(123)
+n_train <- (0.8 * nrow(dataset))
 train_indices <- sample(1:nrow(dataset), n_train)
 trainset <- dataset[train_indices, ]
 testset <- dataset[-train_indices, ]
 
 ```
 
+
 ### 6.2 Yo : Selection - Departure
+
+```{r}
+trainset %>% head
+```
 
 
 Store only y0 target value
 ```{r}
-trainset0_y0<-trainset$delta.selection.departure
-trainset0<-trainset[,-c("delta.departure.presentation","delta.selection.presentation","delta.selection.departure")]
-testset0_y0<-testset$delta.selection.departure
-testset0<-testset[,-c("delta.departure.presentation","delta.selection.presentation","delta.selection.departure")]
+trainset0_y0<-dataset[train_indices,delta.selection.departure]
+trainset0<-trainset[,-c("delta.selection.departure","delta.departure.presentation","delta.selection.presentation")]
+testset0_y0<-dataset[-train_indices,delta.selection.departure]
+testset0<-testset[,-c("delta.selection.departure","delta.departure.presentation","delta.selection.presentation")]
+```
+
+```{r}
+trainset$delta.selection.departure %>% head
+dataset[train_indices,delta.selection.departure] %>% head
 ```
 
 
@@ -1331,14 +1351,13 @@ xgb_params <- list(colsample_bytree = 0.7, #variables per tree
                    max_depth = 5, #tree levels
                    eta = 0.3, #shrinkage
                    eval_metric = "rmse", 
-                   objective = "reg:linear",
-                   seed = 4321
+                   objective = "reg:linear"
                    )
 ```
 
 train our model
 ```{r}
-#set.seed(4321)
+set.seed(4321)
 gb_0_dt <- xgb.train(params = xgb_params,
                    data = dtrain1,
                    print_every_n = 100,
@@ -1387,7 +1406,6 @@ testset$delta.selection.departure %>% head
 Compute MSE, MAE, R2
 ```{r}
 postResample(pred = pred_xgboost_y0, obs = testset$delta.selection.departure)
-
 ```
 
 
@@ -1426,7 +1444,7 @@ xgb_params <- list(colsample_bytree = 0.5, #variables per tree
 
 train our model
 ```{r}
-#set.seed(4321)
+set.seed(4321)
 gb_1_dt <- xgb.train(params = xgb_params,
                    data = dtrain2,
                    print_every_n = 100,
@@ -2182,38 +2200,40 @@ Convert into integer
 ```{r}
 pred_final$pred_reg_final_y0=pred_final$pred_reg_final_y0 %>% as.integer()
 pred_final$pred_reg_final_y1=pred_final$pred_reg_final_y1 %>% as.integer()
-pred_final$pred_reg_final_ys=pred_final$pred_reg_final_ys %>% as.integer
+pred_final$pred_reg_final_ys=pred_final$pred_reg_final_ys %>% as.integer()
 ```
 
-
-
-Retrieve Order from challange
-```{r}
-#order_x_test<-read.csv("x_test.csv")
-#order_x_test<-data.frame(order_x_test$emergency.vehicle.selection)
-
-#order_x_test %>% setDT
-#order_x_test %>% head
-#str(order_x_test)
-
-#y_final<-merge(order_x_test,pred_final, by.x = 'order_x_test.emergency.vehicle.selection', by.y = 'emergency-vehicle-selection', all = FALSE,sort=FALSE)
-```
-
+Retrieve order from original 
 
 ```{r}
-#y_final %>% str
+id_order %>% head
 ```
 
 ```{r}
-#sum(is.na(y_final))
-#which(is.na(y_final))
-#y_final[is.na(y_final)] <- 0
+y_final<-merge(id_order,pred_final, by.x = "x_test1.emergency.vehicle.selection", by.y ="id", all = FALSE,sort=FALSE)
 ```
+
+```{r}
+y_final %>% head
+```
+
 
 
 ```{r}
-#fwrite(y_final, "y_test.csv",sep=",")
+sum(is.na(y_final))
+which(is.na(y_final))
+y_final[is.na(y_final)] <- 0
 ```
+
+
+Write csv file. 
+Go to pyhton script for generate good csv. 
+```{r}
+fwrite(y_final, "y_test.csv",sep=",")
+```
+
+
+
 
 
 ***
