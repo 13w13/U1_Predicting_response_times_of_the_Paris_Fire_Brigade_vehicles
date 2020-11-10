@@ -1,7 +1,7 @@
 ![ViewCount](https://views.whatilearened.today/views/github/13w13/U1_Predicting_response_times_of_the_Paris_Fire_Brigade_vehicles-.svg?cache=remove)
 ---
 Edgar Jullien, Antoine Settelen, Simon Weiss  
-~2 week development
+~2 weeks development
 
 
 # Introduction
