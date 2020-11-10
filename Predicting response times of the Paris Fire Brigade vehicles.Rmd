@@ -958,8 +958,7 @@ levels(x_test$floor)<-list("-2"=c("-10","-9","-6","-5","-4","-3", "-2"),"-1"=c("
 table(data.quali$rescue.center)
 ```
 We remove some levels (for data.clean$rescue.center variable) which are not significant for us because there are very few samples for them. 
-Then, we use the drop level function to drop levels where there is no sample.
-```{r}
+
 table(data.clean$rescue.center)
 levels(data.clean$rescue.center)
 
@@ -983,7 +982,7 @@ data.clean <- data.clean[data.clean$rescue.center != 266324,]
 table(droplevels(data.clean$rescue.center))
 
 table(data.clean$rescue.center)
-```
+
 
 
 
@@ -1239,12 +1238,11 @@ It is worth to take into account that it might be a corr between the order of th
 Once we have classify those brigate, we will be able to remove the id of the intervention. 
 
 
-```{r}
 data.fe$intervention %>% as.factor() %>% str
 data.fe$emergency.vehicle.selection %>% str
 
 204987-196480
-```
+
 
 
 ```{r}
@@ -1481,6 +1479,8 @@ data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
 
 ## 6. Tree quick
 ### 6.1 Sample 
+
+
 Store final dataset
 ```{r}
 dataset<-data.fe
@@ -1516,7 +1516,7 @@ sparse_matrix <- sparse.model.matrix( ~ ., data = trainset0)[,-1]
 
 Store into xgb Matrix
 ```{r}
-dtrain <- xgb.DMatrix(sparse_matrix,label = trainset$delta.selection.departure)
+dtrain1 <- xgb.DMatrix(sparse_matrix,label = trainset$delta.selection.departure)
 ```
 Set parameters for our xgb tree
 ```{r}
@@ -1535,9 +1535,9 @@ train our model
 ```{r}
 set.seed(4321)
 gb_0_dt <- xgb.train(params = xgb_params,
-                   data = dtrain,
+                   data = dtrain1,
                    print_every_n = 100,
-                   nrounds = 1000)
+                   nrounds = 10)
 ```
 Plot the 30 first important features in our model
 
@@ -1589,7 +1589,7 @@ postResample(pred = pred_xgboost_y0, obs = testset$delta.selection.departure)
 
 ### 6.3 Y1 : Departure - Presentation
 
-Store only y0 target value
+Store only y1 target value
 ```{r}
 trainset1_y1<-trainset$delta.departure.presentation
 trainset1<-trainset[,-c("delta.selection.departure","delta.selection.presentation","delta.departure.presentation")]
@@ -1604,7 +1604,7 @@ sparse_matrix <- sparse.model.matrix( ~ ., data = trainset1)[,-1]
 
 Store into xgb Matrix
 ```{r}
-dtrain <- xgb.DMatrix(sparse_matrix,label = trainset$delta.departure.presentation)
+dtrain2 <- xgb.DMatrix(sparse_matrix,label = trainset$delta.departure.presentation)
 ```
 Set parameters for our xgb tree
 ```{r}
@@ -1623,9 +1623,9 @@ train our model
 ```{r}
 set.seed(4321)
 gb_1_dt <- xgb.train(params = xgb_params,
-                   data = dtrain,
+                   data = dtrain2,
                    print_every_n = 100,
-                   nrounds = 1000)
+                   nrounds = 10)
 ```
 Plot the 30 first important features in our model
 
@@ -1685,54 +1685,65 @@ postResample(pred = pred_xgboost_ys, obs = testset$delta.departure.presentation)
 No too bad accuracy
 
 
-### 6.5 Use feature imporatnce to create group for factor variables for futur reg
-
-### 6.6 Actual predict
+### 6.5 Use feature imporatnce to create group for factor variables for futur regression
 
 ```{r}
-namevector <- c("delta.selection.departure")
-x_test[ , namevector] <- N.A
 
-
-x_test[,"delta.selection.departure"] <- 0
-x_test$delta.selection.departure<- "1"
 ```
 
 ```{r}
-gdxg<-x_test[,-c("delta.selection.departure")]
+
+```
+
+```{r}
+
+```
+
+### 6.6 Actual predict NO
+
+```{r}
+x_test<-x_test[,-1]
 ```
 
 
 Y0
 Predict
+Prb : not the same one hot encoding ...114 column missing
+
+
 ```{r}
-sparse_matrix3 <- sparse.model.matrix( ~ ., data =gdxg)[,-1]
+sparse_matrix3 <- sparse.model.matrix( ~ ., data =x_test )[,-1]
 ```
 
 Store into xgb Matrix
 
 
-```{r}
-dtest <- xgb.DMatrix(sparse_matrix3,label=x_test$delta.selection.departure)
-```
-
-
-Predict
-```{r}
-sparse_matrix2 <- sparse.model.matrix( ~ ., data =testset0 )[,-1]
-```
-
-Store into xgb Matrix
-
 
 ```{r}
-dtest <- xgb.DMatrix(sparse_matrix2,label=testset$delta.selection.departure)
+dtest <- xgb.DMatrix(sparse_matrix3)
 ```
 
 
 ```{r}
-pred_xgboost_y0_final <- predict(gb_0_dt,dtest)
+gb_0_dt$feature_names %>% head
+colnames(dtest)
 ```
+
+
+```{r}
+pred_xgboost_y0_final <- predict(gb_0_dt,dtest )
+```
+
+
+```{r}
+object <- xgb.Booster.complete(gb_0_dt, saveraw = FALSE)
+object[["feature_names"]]
+```
+
+```{r}
+colnames(dtest)
+```
+
 
 ```{r}
 pred_xgboost_y0_final %>% head
