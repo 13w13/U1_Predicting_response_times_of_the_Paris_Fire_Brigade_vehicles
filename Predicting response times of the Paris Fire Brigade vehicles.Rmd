@@ -1404,9 +1404,7 @@ data.variables.PCA <- data.fe %>%
 data.variables.PCA <- scale(data.variables.PCA, center = TRUE)
 
 ## 6. Tree quick
-
-
-
+### 6.1 Sample 
 Store final dataset
 ```{r}
 dataset<-data.fe
@@ -1414,25 +1412,37 @@ dataset<-data.fe
 
 
 
-
+Sample data
 ```{r}
 n_train <- round(0.8 * nrow(dataset))
 train_indices <- sample(1:nrow(dataset), n_train)
-Data_train <- dataset[train_indices, ]
-Data_test <- dataset[-train_indices, ]
+trainset <- dataset[train_indices, ]
+testset <- dataset[-train_indices, ]
 
 ```
 
+### 6.2 Yo : Selection - Departure
+
+
+Store only y0 target value
 ```{r}
-
-sparse_matrix <- sparse.model.matrix(delta.selection.departure ~ ., data = Data_train)[,-1]
-X_train_dmat = xgb.DMatrix(sparse_matrix, label = Data_train$delta.selection.departure)
+trainset0_y0<-trainset$delta.selection.departure
+trainset0<-trainset[,-c("delta.departure.presentation","delta.selection.presentation")]
+testset0_y0<-testset$delta.selection.departure
+testset0<-testset[,-c("delta.departure.presentation","delta.selection.presentation")]
 ```
 
+
+Create one-hot matrix for cat variable. with sparse-matrix
 ```{r}
-dtrain <- xgb.DMatrix(sparse_matrix,label = Data_train$delta.selection.departure)
+sparse_matrix <- sparse.model.matrix(delta.selection.departure ~ ., data = trainset0)[,-1]
 ```
 
+Store into xgb Matrix
+```{r}
+dtrain <- xgb.DMatrix(sparse_matrix,label = trainset0$delta.selection.departure)
+```
+Set parameters for our xgb tree
 ```{r}
 xgb_params <- list(colsample_bytree = 0.7, #variables per tree 
                    subsample = 0.7, #data subset per tree 
@@ -1445,99 +1455,165 @@ xgb_params <- list(colsample_bytree = 0.7, #variables per tree
                    )
 ```
 
-
+train our model
 ```{r}
 set.seed(4321)
 gb_dt <- xgb.train(params = xgb_params,
                    data = dtrain,
-                   print_every_n = 5,
-                   nrounds = 50)
+                   print_every_n = 100,
+                   nrounds = 1000)
 ```
-
-
-```{r}
-sparse_matrix <- sparse.model.matrix(delta.selection.departure ~ ., data =Data_test )[,-1]
-```
-
-```{r}
-dtest <- xgb.DMatrix(sparse_matrix)
-```
-
-
-
-```{r}
-test_preds <- predict(gb_dt,dtest)
-```
-
-```{r}
-mse = mean((Data_test$delta.departure.presentation - test_preds)^2)
-```
-
-```{r}
-model <- xgb.dump(gb_dt)
-```
-
-```{r}
-model[1:10]
-```
-```{r}
-names <- dimnames(data.matrix(X[,-1]))[[2]]
-```
-
+Plot the 30 first important features in our model
 
 ```{r}
 importance_matrix <- xgb.importance(model = gb_dt)
-# Nice graph
-xgb.plot.importance(importance_matrix[1:10,])
+xgb.plot.importance(importance_matrix[1:30,])
 ```
+We find : 
+- delta statut preceding selection
+- Hours
+- Lat intervention
+- Long internvetion
+- emergency vehicule type VSAV$VD (group is or not)
+- ORSRM data
+- Rescue center 2474,77,75,2439  (group is or not)
+- Alert-reason-cat-03
+-departed from its rescue center1
+
+
+Predict
+```{r}
+sparse_matrix2 <- sparse.model.matrix(delta.selection.departure ~ ., data =testset0 )[,-1]
+```
+
+Store into xgb Matrix
 
 
 ```{r}
-library(tibble)
-imp_matrix <- as.tibble(xgb.importance(feature_names = colnames(Data_test %>% select(-delta.selection.departure)), model = gb_dt))
-
-imp_matrix %>%
-  ggplot(aes(reorder(Feature, Gain, FUN = max), Gain, fill = Feature)) +
-  geom_col() +
-  coord_flip() +
-  theme(legend.position = "none") +
-  labs(x = "Features", y = "Importance")
+dtest <- xgb.DMatrix(sparse_matrix2,label=testset0$delta.selection.departure)
 ```
 
-
-### 6.2 Yo : Selection - Departure
-
-Remove id variable
+Predict
 
 ```{r}
-Data_test<-Data_test[,-c("emergency.vehicle.selection")]
-
-
-```
-
-Remove other Y
-
-```{r}
-
-Data_train<-Data_train[,-c("delta.departure.presentation","delta.selection.presentation")]
-
-```
-
-
-```{r}
-library(xgboost)
-
-xgbc = xgboost(data = as.matrix(Data_train[,-c("delta.selection.departure")]), label=(Data_train$delta.selection.departure),max.depth = 2, nrounds = 10)
-
-print(xgbc)
-
+pred_xgboost_y0 <- predict(gb_dt,dtest)
 ```
 
 ```{r}
-pred_y = predict(xgbc, Data_test[,-c("delta.departure.presentation","delta.selection.presentation")])
-
-mse = mean((Data_test$delta.departure.presentation - pred_y)^2)
+pred_xgboost_y0 %>% head
+testset0$delta.selection.departure %>% head
 ```
+Compute MSE
+```{r}
+postResample(pred = pred_xgboost_y0, obs = testset0$delta.selection.departure)
+
+```
+
+
+
+### 6.3 Y1 : Departure - Presentation
+
+Store only y0 target value
+```{r}
+trainset1_y1<-trainset$delta.departure.presentation
+trainset1<-trainset[,-c("delta.selection.departure","delta.selection.presentation")]
+testset1_y1<-testset$delta.departure.presentation
+testset1<-testset[,-c("delta.selection.departure","delta.selection.presentation")]
+```
+
+Create one-hot matrix for cat variable. with sparse-matrix
+```{r}
+sparse_matrix <- sparse.model.matrix(delta.departure.presentation ~ ., data = trainset1)[,-1]
+```
+
+Store into xgb Matrix
+```{r}
+dtrain <- xgb.DMatrix(sparse_matrix,label = trainset1$delta.departure.presentation)
+```
+Set parameters for our xgb tree
+```{r}
+xgb_params <- list(colsample_bytree = 0.5, #variables per tree 
+                   subsample = 0.5, #data subset per tree 
+                   booster = "gbtree",
+                   max_depth = 3, #tree levels
+                   eta = 0.3, #shrinkage
+                   eval_metric = "rmse", 
+                   objective = "reg:linear",
+                   seed = 4321
+                   )
+```
+
+train our model
+```{r}
+set.seed(4321)
+gb_dt <- xgb.train(params = xgb_params,
+                   data = dtrain,
+                   print_every_n = 100,
+                   nrounds = 1000)
+```
+Plot the 30 first important features in our model
+
+```{r}
+importance_matrix <- xgb.importance(model = gb_dt)
+xgb.plot.importance(importance_matrix[1:30,])
+```
+We find : 
+- OSRM data
+- Lat intervention
+- Long internvetion
+- statut.preceding-selection
+- emergency vehicule type VSAV$VD (group is or not)
+
+
+Predict
+```{r}
+sparse_matrix2 <- sparse.model.matrix(delta.departure.presentation ~ ., data =testset1 )[,-1]
+```
+
+Store into xgb Matrix
+
+
+```{r}
+dtest <- xgb.DMatrix(sparse_matrix2,label=testset1$delta.departure.presentation)
+```
+
+Predict
+
+```{r}
+pred_xgboost_y1 <- predict(gb_dt,dtest)
+```
+
+```{r}
+pred_xgboost_y1 %>% head
+testset1$delta.departure.presentation %>% head
+```
+```{r}
+postResample(pred = pred_xgboost_y1, obs = testset1$delta.departure.presentation)
+```
+
+
+
+### 6.4 Ys : Compute global
+
+```{r}
+pred_xgboost_ys=pred_xgboost_y0+pred_xgboost_y1
+pred_xgboost_ys %>% head
+testset$delta.selection.presentation %>% head
+```
+
+```{r}
+postResample(pred = pred_xgboost_ys, obs = testset$delta.departure.presentation)
+```
+No too bad accuracy
+
+
+### 6.5 Use feature imporatnce to create group for factor variables for futur reg
+
+### 6.6 
+Actual predict
+Redo cleaning applied below 
+
+
 
 ## 6. OLS - Regression
 
