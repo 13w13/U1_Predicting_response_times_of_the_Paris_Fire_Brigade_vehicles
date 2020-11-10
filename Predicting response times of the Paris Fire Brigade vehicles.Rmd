@@ -157,6 +157,7 @@ library(leaflet)
 library(Hmisc)
 library(FactoMineR)
 library(BCA)
+library(corrplot)
 
 ```
 
@@ -417,8 +418,7 @@ data %>%
 Cor between Ys
 
 ```{r}
-library(Hmisc)
-library(corrplot)
+
 corr<-rcorr(as.matrix(y_train[,-c(1,4)])) # We remove global and ID which will be cor
 y_train_cor= corr$r
 
@@ -1238,11 +1238,14 @@ It is worth to take into account that it might be a corr between the order of th
 Once we have classify those brigate, we will be able to remove the id of the intervention. 
 
 
+
+
+```{r}
 data.fe$intervention %>% as.factor() %>% str
 data.fe$emergency.vehicle.selection %>% str
 
 204987-196480
-
+```
 
 
 ```{r}
