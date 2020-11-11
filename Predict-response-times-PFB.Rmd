@@ -1410,6 +1410,8 @@ postResample(pred = pred_xgboost_y0, obs = testset$delta.selection.departure)
 
 
 
+
+
 ### 6.3 Y1 : Departure - Presentation
 
 Store only y1 target value
@@ -1959,6 +1961,8 @@ pred_reg_final_y0 <- predict(lm,x_test0.regroup)
 
 
 
+
+
 ### 7.2 Y1 
 
 Remove id variable
@@ -2232,6 +2236,8 @@ Go to pyhton script for generate good csv.
 fwrite(y_final, "y_test.csv",sep=",")
 ```
 
+
+![First R2 score from public score](C:/Users/swp/Documents/_Perso/Cours/M2/Competition/PFB/1st.png)
 
 
 
