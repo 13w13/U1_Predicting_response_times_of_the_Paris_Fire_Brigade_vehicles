@@ -1510,7 +1510,7 @@ postResample(pred = pred_xgboost_ys, obs = testset$delta.departure.presentation)
 No too bad accuracy ! 
 
 
-### 6.5 Use feature importance to create group for factor variables for futur regression
+### 6.5 Use feature importance to create group for factor variables for futur models
 
 For Y0 
 ```{r}
@@ -2259,6 +2259,265 @@ fwrite(y_final, "y_test.csv",sep=",")
 
 
 ![First R2 score from public score](C:/Users/swp/Documents/_Perso/Cours/M2/Competition/PFB/1st.png)
+
+
+## 9. Xgboost : x_test
+
+
+### 9.1 reduced x_test
+
+Keeping some factors 
+
+OSRM data
+internvetion
+floor
+alter.reason.category
+long internvetion 
+lat internvetion
+delta.status
+Weekdays
+Month
+hours 
+departed from
+
+```{r}
+data.fe %>% str
+x_test %>% str
+```
+
+
+```{r}
+data.fe.reduced.0<-data.fe[,-c("delta.departure.presentation","delta.selection.presentation","rescue.center","emergency.vehicle.type","emergency.vehicle","n","location.of.the.event","emergency.vehicle.selection")]
+```
+
+
+
+```{r}
+x_test.reduced<-x_test[,-c("rescue.center","emergency.vehicle.type","emergency.vehicle","n","location.of.the.event","emergency.vehicle.selection")]
+```
+
+#### Y0
+
+
+
+Validation 
+```{r}
+set.seed(4321)
+trainIndex <- createDataPartition(data.fe.reduced.0$delta.selection.departure, p = 0.8, list= FALSE, times = 1)
+train=data.fe.reduced.0[trainIndex,]
+valid=data.fe.reduced.0[-trainIndex,]
+```
+
+
+```{r}
+data.fe.reduced.0 %>% str
+x_test.reduced %>% str
+```
+
+
+```{r}
+foo <- train %>% select(-delta.selection.departure)
+bar <- valid %>% select(-delta.selection.departure)
+
+dtrain <- xgb.DMatrix(data.matrix(foo),label = train$delta.selection.departure)
+dvalid <- xgb.DMatrix(data.matrix(bar),label = valid$delta.selection.departure)
+dtest <- xgb.DMatrix(data.matrix(x_test.reduced))
+```
+
+
+
+```{r}
+gb_params_final <- list(colsample_bytree = 0.7, #variables per tree 
+                   subsample = 0.7, #data subset per tree 
+                   booster = "gbtree",
+                   max_depth = 5, #tree levels
+                   eta = 0.3, #shrinkage
+                   eval_metric = "rmse", 
+                   objective = "reg:linear",
+                   seed = 4321
+                   )
+
+watchlist <- list(train=dtrain, valid=dvalid)
+```
+
+
+```{r}
+set.seed(4321)
+gb_dt_final <- xgb.train(params = xgb_params,
+                   data = dtrain,
+                   print_every_n = 1000,
+                   watchlist = watchlist,
+                   nrounds = 10000)
+```
+
+After the fitting we are running a 5-fold cross-validation (CV) to estimate our model's performance. Also this stage would exceed the Kaggle run-time limit for a larger number of rounds, therefore I'm limiting it here to 15 sample rounds to demonstrate the principle. You should use at least a few **100** in your analysis, depending on your XGBoost parameters. The early-stopping parameter will make sure that the CV fitting is stopped once the model can't be improved through additional steps.
+
+```{r}
+xgb_cv <- xgb.cv(xgb_params,dtrain,early_stopping_rounds = 10, nfold = 5, nrounds=10000)
+```
+
+```{r}
+yo_preds <- predict(gb_dt_final,dtest)
+```
+Working ! 
+
+```{r}
+yo_preds %>% head
+```
+
+#### Y1
+
+
+```{r}
+data.fe.reduced.1<-data.fe[,-c("delta.selection.departure","delta.selection.presentation","rescue.center","emergency.vehicle.type","emergency.vehicle","n","location.of.the.event","emergency.vehicle.selection")]
+```
+
+
+
+Validation 
+```{r}
+set.seed(4321)
+trainIndex <- createDataPartition(data.fe.reduced.1$delta.departure.presentation, p = 0.8, list= FALSE, times = 1)
+train=data.fe.reduced.1[trainIndex,]
+valid=data.fe.reduced.1[-trainIndex,]
+```
+
+
+
+```{r}
+foo <- train %>% select(-delta.departure.presentation)
+bar <- valid %>% select(-delta.departure.presentation)
+
+dtrain <- xgb.DMatrix(data.matrix(foo),label = train$delta.departure.presentation)
+dvalid <- xgb.DMatrix(data.matrix(bar),label = valid$delta.departure.presentation)
+```
+
+
+
+```{r}
+gb_params_final <- list(colsample_bytree = 0.7, #variables per tree 
+                   subsample = 0.7, #data subset per tree 
+                   booster = "gbtree",
+                   max_depth = 5, #tree levels
+                   eta = 0.3, #shrinkage
+                   eval_metric = "rmse", 
+                   objective = "reg:linear",
+                   seed = 4321
+                   )
+
+watchlist <- list(train=dtrain, valid=dvalid)
+```
+
+
+```{r}
+set.seed(4321)
+gb_dt_final <- xgb.train(params = xgb_params,
+                   data = dtrain,
+                   print_every_n = 5,
+                   watchlist = watchlist,
+                   nrounds = 10000)
+```
+
+After the fitting we are running a 5-fold cross-validation (CV) to estimate our model's performance. Also this stage would exceed the Kaggle run-time limit for a larger number of rounds, therefore I'm limiting it here to 15 sample rounds to demonstrate the principle. You should use at least a few **100** in your analysis, depending on your XGBoost parameters. The early-stopping parameter will make sure that the CV fitting is stopped once the model can't be improved through additional steps.
+
+```{r}
+xgb_cv <- xgb.cv(xgb_params,dtrain,early_stopping_rounds = 10, nfold = 5, nrounds=10000)
+```
+
+```{r}
+y1_preds <- predict(gb_dt_final,dtest)
+```
+
+
+```{r}
+y1_preds %>% head
+```
+
+
+#### Compute global
+```{r}
+pred_ys=yo_preds+y1_preds
+pred_final=data.frame(yo_preds,y1_preds,pred_ys)
+```
+
+
+```{r}
+pred_final %>% head
+```
+
+
+```{r}
+pred_final$id<-x_test$emergency.vehicle.selection
+```
+Change columns order
+```{r}
+pred_final <- pred_final[, c(4, 1, 2, 3)]
+
+```
+
+Retrieve order from original 
+
+
+```{r}
+pred_final %>% head
+```
+
+
+```{r}
+pred_final %>% head
+```
+
+```{r}
+id_order %>% head
+len <- dim(id_order)[1]
+id_order <- cbind(id_order, rank=1:len)
+```
+
+
+```{r}
+id_order %>% head
+```
+
+
+```{r}
+y_final=merge(pred_final,id_order, by.x = 'id', by.y = 'x_test.emergency.vehicle.selection', all = FALSE)
+```
+
+
+```{r}
+y_final %>% head
+```
+
+```{r}
+y_final=y_final[order(y_final[,'rank']),]
+y_final %>% head
+y_final %>% setDT
+y_final=y_final[,-c("rank.1")]
+
+```
+
+
+```{r}
+y_final %>% head
+```
+
+
+
+```{r}
+sum(is.na(y_final))
+which(is.na(y_final))
+y_final[is.na(y_final)] <- 0
+```
+
+
+Write csv file. 
+Go to pyhton script for generate good csv. 
+```{r}
+fwrite(y_final, "y_test.csv",sep=",")
+```
+
+
+
 
 
 
