@@ -13,7 +13,7 @@ This group project responds to **professor Nadine Galy instructions** written be
 The project involves identifying a real-world business problem or opportunity and designing and implementing an analysis plan to address it using at least one of the modelling methods studied in the course. You are free to choose any business problem or opportunity or public policy issue that you consider challenging and useful to address using business analytics.
 The data that you use should be readily available and verifiable.
 
-This is a notebook for the [Paris Fire Brigate](https://paris-fire-brigade.github.io/data-challenge/challenge.html) data challenge 2020 with [ENS](https://challengedata.ens.fr/participants/challenges/21/) and [College de France](https://www.college-de-france.fr/site/stephane-mallat/Challenges-2020.html).
+This is a notebook for the [Paris Fire Brigade](https://paris-fire-brigade.github.io/data-challenge/challenge.html) data challenge 2020 with [ENS](https://challengedata.ens.fr/participants/challenges/21/) and [College de France](https://www.college-de-france.fr/site/stephane-mallat/Challenges-2020.html).
 
 
 **The goal of this playground challenge** is to predict the *The response times of the Paris Fire Brigade vehicles * which is the delay between:
