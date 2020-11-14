@@ -2920,6 +2920,19 @@ fwrite(y_final, "y_test.csv",sep=",")
 
 
 
+### 11. To Follow ...
+
+What could be done in order to increase our R2 ? 
+
+Increase Feature Buidling:
+add supp files from data
+Coordinate : lot of thing to do - Direction, km from Paris Center (traffic issue)
+Mean speed / vehicule type
+Mean speed / rescue center
+Holidays or not (traffic issue)
+We have removed GPS data because of NA but can be important ? 
+Vehicule type
+
 ***
 
 ## Acknowledgements and references
